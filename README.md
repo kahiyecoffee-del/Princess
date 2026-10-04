@@ -2,8 +2,7 @@
 
 Oyunun arayüzü İngilizcedir; bu belge Türkçedir.
 
-Kumar bağımlılığıyla mücadele eden kişilere **parasız, risksiz ve sakinleştirici** bir alternatif sunmayı hedefleyen,
-reklam gelirli bir 3'lü eşleştirme (match-3) oyunu. Android / Google Play için Capacitor ile paketlenir.
+Gerçek para, bahis veya şans çarkı içermeyen, sakinleştirici ve reklam gelirli bir 3'lü eşleştirme (match-3) oyunu. Android / Google Play için Capacitor ile paketlenir.
 
 ## Özellikler
 
@@ -15,7 +14,8 @@ reklam gelirli bir 3'lü eşleştirme (match-3) oyunu. Android / Google Play iç
 | Zorluk | Seviye arttıkça daha az hamle, daha çok renk, daha yüksek hedef, tahtada boşluklar, çift katlı buz |
 | Can | En fazla **5 can**, her can **30 dakikada** yenilenir. Seviye kaybedilince veya yarıda bırakılınca 1 can gider |
 | Reklamlar | **Her 5 seviyede bir** otomatik geçiş reklamı; hamle bitince **reklam izle → +3 hamle** (deneme başına en fazla 2 kez); can bitince reklam izle → +1 can |
-| Kurtuluş Yolum | Bahissiz gün sayacı, biriken para, rozetler, günlük motivasyon mesajı, "Dürtü geldi" nefes egzersizi, YEDAM 115 yardım hattı |
+| Prenses | Nefes alan, göz kırpan, cilveli hareketler yapan ve İngilizce konuşan karakter; dokununca kıkırdar |
+| Ses | Özgün menü ve oyun müzikleri, çan tınılı efektler; ayarlardan ayrı ayrı kapatılabilir |
 | Sağlıklı oyun | 30 dakikalık kesintisiz oyunda mola hatırlatması. Şans çarkı, ganimet kutusu, gerçek para yok |
 
 ## Proje yapısı
@@ -30,7 +30,8 @@ www/                  Oyunun kendisi (Capacitor'ın webDir'i)
   js/render.js        Canvas çizimi, animasyonlar, parçacık efektleri, dokunma girişi
   js/lives.js         Can sistemi (5 can / 30 dk)
   js/ads.js           AdMob entegrasyonu (+ tarayıcı için sahte reklam)
-  js/recovery.js      Kurtuluş araçları ve yardım hatları
+  js/princess.js      Prensesin animasyonları
+  js/voice.js         Prensesin sesi ve müzik
   js/main.js          Oyun akışı, menüler, modallar
 test/                 Birim testleri (node --test)
 tools/simulate.mjs    Zorluk dengesini ölçen yapay oyuncu
@@ -123,8 +124,8 @@ bir yerde saklayın; kaybederseniz uygulamayı güncelleyemezsiniz.
 - **İçerik derecelendirmesi**: "Simüle kumar" sorusuna **Hayır** (oyunda bahis, şans çarkı, slot mekaniği yok).
 - **Hedef kitle**: 13 yaş ve üzeri seçin. Çocuklara yönelik (Families) seçilirse çok daha sıkı reklam kuralları uygulanır.
 - **Veri güvenliği**: AdMob reklam kimliği ve cihaz bilgisi topladığı için "Cihaz veya diğer kimlikler" beyan edilmeli.
-- **Sağlık iddiaları**: Mağaza açıklamasında "tedavi eder" gibi ifadeler kullanmayın; "destek olur", "dikkat dağıtmaya yardımcı olur"
-  gibi ifadeler kullanın. Uygulama içinde profesyonel desteğe (YEDAM 115) yönlendirme zaten mevcut.
+- **Sağlık iddiaları**: Uygulamada bağımlılık desteği bölümü olmadığı için mağaza açıklamasında bağımlılık
+  tedavisi veya desteği iddiasında bulunmayın.
 - **Telif / marka**: Başka oyunların adını, karakterlerini veya görsellerini (ör. "Starlight Princess") kullanmayın. Bu
   projedeki tüm görseller kodla çizilmiş özgün tasarımlardır.
 

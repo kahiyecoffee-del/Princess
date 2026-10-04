@@ -6,11 +6,8 @@ import { MAX_LIVES, refresh, loseLife, addLife, msToNext, formatMs } from './liv
 import { Capacitor, registerPlugin } from '../vendor/capacitor-core.js';
 import { initAds, showInterstitial, showRewarded, AD_CONFIG } from './ads.js';
 import { play as sfx, setSoundEnabled } from './audio.js';
-import { say, setTrack, holdMusic, setVoiceEnabled, setMusicEnabled, whenUnlocked } from './voice.js';
+import { say, giggle, setTrack, holdMusic, setVoiceEnabled, setMusicEnabled, whenUnlocked } from './voice.js';
 import { Princess } from './princess.js';
-import {
-  sortedHelplines, MILESTONES, daysSince, moneySaved, dailyMessage, todayStr, milestoneReached, guessCurrency,
-} from './recovery.js';
 
 // How many times per attempt the player can watch an ad for +3 moves.
 const MAX_CONTINUES = 2;
@@ -19,6 +16,7 @@ const CONTINUE_MOVES = 3;
 const BREAK_REMINDER_SECONDS = 30 * 60;
 
 const $ = (s) => document.querySelector(s);
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const state = load();
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music !== false);
@@ -30,9 +28,22 @@ let continuesUsed = 0;
 let sessionPlaySeconds = 0;
 let nextBreakAt = BREAK_REMINDER_SECONDS;
 
-const renderer = new Renderer($('#board'), { onSwap: handleSwap, onSound: (n, k) => sfx(n, k) });
-const homePrincess = new Princess($('#princess-home'), { onTap: () => say('tickles') });
-const stagePrincess = new Princess($('#princess-stage'), { onTap: () => say('tickles') });
+const renderer = new Renderer($('#board'), { onSwap: handleSwap, onSound: (n, k) => sfx(n, k), onHint: princessHint });
+const tapLine = () => say(Math.random() < 0.6 ? 'tickles' : pick(['giggle1', 'giggle2', 'giggle3']));
+const homePrincess = new Princess($('#princess-home'), { onTap: tapLine, onGiggle: giggle });
+const stagePrincess = new Princess($('#princess-stage'), { onTap: tapLine, onGiggle: giggle, framed: false });
+
+// When the player seems stuck, the princess leans toward the board and whispers a hint.
+let lastHintTalk = 0;
+function princessHint() {
+  if (currentScreen !== 'game') return;
+  if (Date.now() - lastHintTalk > 45000) {
+    lastHintTalk = Date.now();
+    cheer('psst', 'Psst! Look here, darling.', 2200, 'lean');
+  } else {
+    stagePrincess.react('lean');
+  }
+}
 
 // Short vibration for tactile feedback (Android); silently ignored elsewhere.
 function haptic(ms = 12) {
@@ -46,7 +57,7 @@ async function withAd(fn) {
 }
 
 // ---------- Screens ----------
-const screens = ['home', 'map', 'game', 'recovery'];
+const screens = ['home', 'map', 'game'];
 let currentScreen = 'home';
 function show(name) {
   for (const s of screens) {
@@ -58,7 +69,6 @@ function show(name) {
   setTrack(name === 'game' ? 'game' : 'menu');
   if (name === 'home') renderHome();
   if (name === 'map') renderMap();
-  if (name === 'recovery') renderRecovery();
   if (name === 'game') requestAnimationFrame(() => renderer.resize());
 }
 document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => show('home')));
@@ -147,14 +157,11 @@ async function noLivesFlow() {
 // ---------- Home ----------
 function renderHome() {
   $('#play-level').textContent = Math.min(state.maxLevel, LEVEL_COUNT);
-  const days = daysSince(state.recovery.quitDate);
-  $('#recovery-badge').textContent = state.recovery.quitDate ? `Day ${days}` : '';
   updateLivesUI();
 }
 
 $('#btn-play').addEventListener('click', () => startLevel(Math.min(state.maxLevel, LEVEL_COUNT)));
 $('#btn-map').addEventListener('click', () => show('map'));
-$('#btn-recovery').addEventListener('click', () => show('recovery'));
 // ---------- Settings ----------
 const SETTINGS = [
   ['music', 'Music', (v) => setMusicEnabled(v)],
@@ -287,7 +294,7 @@ async function startLevel(n) {
   buildGoalsUI();
   updateHUD();
   hideSpeech();
-  setTimeout(() => cheer('lets-shine', "Let's shine together!", 1800, 'tilt'), 700);
+  setTimeout(() => cheer('lets-shine', "Let's shine together, darling!", 1900, 'hop'), 700);
   return true;
 }
 
@@ -386,23 +393,30 @@ async function handleSwap(a, b) {
   });
   updateHUD();
   renderer.busy = false;
-  if (!engine.finished) praiseMove(bestCascade, specials, rainbow);
+  if (!engine.finished && !praiseMove(bestCascade, specials, rainbow)) stagePrincess.react('nod');
   if (engine.finished) await endOfMoves();
 }
 
 // The princess praises good moves out loud (not every move, so it stays special).
 const PRAISE = {
-  2: [['great', 'Great!'], ['sweet', 'So sweet!'], ['ooh-nice', 'Ooh, nice one!']],
-  3: [['amazing', 'Amazing!'], ['wonderful', 'Wonderful!'], ['hehe', 'Hehe! Amazing!']],
-  4: [['fantastic', 'Fantastic!'], ['so-good', "You're so good at this!"], ['wow', 'Wow! Impressive!']],
-  5: [['spectacular', 'Spectacular!'], ['my-hero', 'My hero!']],
+  2: [['great', 'Ooh, great!'], ['sweet', 'Aww, so sweet!'], ['ooh-nice', 'Ooh, nice one!'], ['yay', 'Yay! Hehe!']],
+  3: [['amazing', 'Amazing! Hehe!'], ['wonderful', 'Mmm, wonderful!'], ['hehe', 'Hehe! Amazing!']],
+  4: [['fantastic', 'Fantastic, darling!'], ['so-good', "You're so good at this!"], ['wow', "Wow! I'm impressed!"]],
+  5: [['spectacular', "Spectacular! You're dazzling!"], ['my-hero', 'My hero! Hehe!']],
   6: [['magnificent', 'Magnificent!']],
 };
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 function praiseMove(cascade, specials, rainbow) {
-  if (rainbow) return cheer('magnificent', 'Magnificent!', 2000, 'big');
-  if (cascade >= 2) return cheer(...pick(PRAISE[Math.min(cascade, 6)]), 1800, cascade >= 4 ? 'big' : 'cheer');
-  if (specials > 0) return cheer(...pick([['wonderful', 'Wonderful!'], ['brilliant', 'Brilliant!'], ['smile', 'You make me smile!']]));
+  if (rainbow) { cheer('magnificent', "Magnificent! I'm impressed!", 2200, 'dance'); return true; }
+  if (cascade >= 2) {
+    const [key, text] = pick(PRAISE[Math.min(cascade, 6)]);
+    cheer(key, text, 1800, cascade >= 4 ? 'dance' : 'cheer');
+    return true;
+  }
+  if (specials > 0) {
+    cheer(...pick([['wonderful', 'Mmm, wonderful!'], ['brilliant', 'Brilliant! Hehe!'], ['smile', 'You make me smile!']]), 1800, 'kiss');
+    return true;
+  }
+  return false;
 }
 
 let speechTimer = 0;
@@ -414,7 +428,7 @@ function cheer(key, text, ms = 1800, reaction = 'cheer') {
   void bubble.offsetWidth;
   bubble.classList.add('pop');
   stagePrincess.react(reaction);
-  haptic(reaction === 'big' ? 30 : 12);
+  haptic(reaction === 'dance' ? 30 : 12);
   say(key);
   clearTimeout(speechTimer);
   speechTimer = setTimeout(hideSpeech, ms);
@@ -445,7 +459,7 @@ async function endOfMoves() {
         updateHUD();
         renderer.bigText(`+${CONTINUE_MOVES} Moves!`);
         sfx('special');
-        cheer('keep-going', "Let's keep going!");
+        cheer('keep-going', "Let's keep going, together!", 1800, 'hop');
         return;
       }
       toast('The ad could not load right now.');
@@ -464,7 +478,7 @@ async function failFlow() {
   const lives = state.lives.lives;
   const choice = await modal({
     title: 'Level failed',
-    body: `<p>You lost a life. Lives left: <b>${lives}</b> ❤</p><p class="small">${dailyMessage()}</p>`,
+    body: `<p>You lost a life. Lives left: <b>${lives}</b> ❤</p><p class="small">Every try makes you better. You can do this!</p>`,
     buttons: [
       { label: 'Try again', value: 'retry', cls: 'btn-primary' },
       { label: 'Home', value: 'home', cls: 'btn-ghost' },
@@ -477,7 +491,7 @@ async function winFlow() {
   renderer.busy = true;
   renderer.bigText('Level Complete!');
   sfx('win');
-  cheer('congratulations', 'Congratulations!', 2400, 'big');
+  cheer('congratulations', 'Congratulations, darling!', 2400, 'dance');
   const leftover = engine.movesLeft;
   await renderer.celebrate(leftover);
   const bonus = engine.finishBonus();
@@ -546,96 +560,6 @@ function trackPlayTime() {
     });
   }
 }
-
-// ---------- My Journey (recovery) ----------
-function renderRecovery() {
-  const rec = state.recovery;
-  const days = daysSince(rec.quitDate);
-  $('#rec-days').textContent = rec.quitDate ? days : '—';
-  const currency = rec.currency || guessCurrency();
-  $('#rec-money').textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 0 }).format(moneySaved(rec));
-  $('#rec-message').textContent = rec.quitDate ? dailyMessage() : 'Enter the day you stopped betting below, and we will count every clean day together. 🌱';
-  $('#rec-urges').textContent = rec.urgesBeaten || 0;
-  const reached = new Set(rec.quitDate ? milestoneReached(days) : []);
-  $('#rec-milestones').innerHTML = MILESTONES.map((m) => `<span class="milestone ${reached.has(m) ? 'on' : ''}">${m} ${m === 1 ? 'day' : 'days'}</span>`).join('');
-  $('#rec-date').value = rec.quitDate || '';
-  $('#rec-date').max = todayStr();
-  $('#rec-spend').value = rec.dailySpend || '';
-  $('#rec-currency').value = currency;
-  $('#rec-helplines').innerHTML = sortedHelplines().map((h) => `
-    <div class="helpline"><div><b>${h.name}</b><br><span class="small">${h.note}</span></div><a href="tel:${h.dial}">📞 ${h.phone}</a></div>`).join('');
-}
-
-$('#rec-save').addEventListener('click', () => {
-  const d = $('#rec-date').value;
-  state.recovery.quitDate = d && d <= todayStr() ? d : state.recovery.quitDate;
-  state.recovery.dailySpend = Math.max(0, Number($('#rec-spend').value) || 0);
-  state.recovery.currency = $('#rec-currency').value;
-  save(state);
-  renderRecovery();
-  toast('Saved 🌱');
-});
-
-$('#rec-reset').addEventListener('click', async () => {
-  const choice = await modal({
-    title: "It's okay 💜",
-    body: '<p>A slip can be part of recovery. What matters is starting again.</p><p>Shall we restart your counter from today?</p>',
-    buttons: [
-      { label: 'Yes, I start again today', value: 'yes', cls: 'btn-recovery' },
-      { label: 'Cancel', value: 'no', cls: 'btn-ghost' },
-    ],
-  });
-  if (choice === 'yes') {
-    state.recovery.quitDate = todayStr();
-    save(state);
-    renderRecovery();
-  }
-});
-
-// Urge moment: breathing exercise (in 4 s, hold 4 s, out 6 s) x 4 rounds
-$('#btn-urge').addEventListener('click', async () => {
-  const body = document.createElement('div');
-  body.innerHTML = '<p>An urge is like a wave. It will pass. Breathe with me.</p><div class="breath-circle">Ready</div><p class="small" data-round></p>';
-  say('breathe');
-  const circle = body.querySelector('.breath-circle');
-  const roundEl = body.querySelector('[data-round]');
-  let cancelled = false;
-  const done = modal({
-    title: "Let's breathe together",
-    body,
-    buttons: [{ label: 'Close', value: 'close', cls: 'btn-ghost' }],
-  }).then(() => { cancelled = true; });
-
-  const phase = (text, scale, ms) => new Promise((r) => {
-    if (cancelled) return r();
-    circle.textContent = text;
-    circle.style.transitionDuration = `${ms}ms`;
-    circle.style.transform = `scale(${scale})`;
-    if (text === 'Breathe in') sfx('breath');
-    setTimeout(r, ms);
-  });
-  await new Promise((r) => setTimeout(r, 2600));
-  for (let i = 1; i <= 4 && !cancelled; i++) {
-    roundEl.textContent = `Round ${i} of 4`;
-    await phase('Breathe in', 1, 4000);
-    await phase('Hold', 1, 4000);
-    await phase('Breathe out', 0.6, 6000);
-  }
-  if (!cancelled) {
-    state.recovery.urgesBeaten = (state.recovery.urgesBeaten || 0) + 1;
-    save(state);
-    $('#modal').hidden = true;
-    cancelled = true;
-    say('you-did-it');
-    await modal({
-      title: 'You did it! 💪',
-      body: `<p>You rode out another urge. How about a level to keep your mind busy?</p><p class="small">If it is still hard, reach out to a helpline in My Journey. It is free and confidential.</p>`,
-      buttons: [{ label: 'OK', value: 'ok', cls: 'btn-recovery' }],
-    });
-    renderRecovery();
-  }
-  await done;
-});
 
 // ---------- Background stars ----------
 (function sky() {

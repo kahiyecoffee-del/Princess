@@ -14,11 +14,6 @@ function defaults() {
     music: true,
     voice: true,
     haptics: true,
-    recovery: {
-      quitDate: null, // kumarı bıraktığı tarih (YYYY-MM-DD)
-      dailySpend: 0, // eskiden günlük ortalama harcama (₺)
-      urgesBeaten: 0, // atlatılan dürtü sayısı
-    },
     playSeconds: 0,
   };
 }
@@ -29,7 +24,7 @@ export function load() {
     if (!raw) return defaults();
     const d = defaults();
     const s = JSON.parse(raw);
-    return { ...d, ...s, recovery: { ...d.recovery, ...(s.recovery || {}) }, lives: { ...d.lives, ...(s.lives || {}) } };
+    return { ...d, ...s, lives: { ...d.lives, ...(s.lives || {}) } };
   } catch {
     return defaults();
   }

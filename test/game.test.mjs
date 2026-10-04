@@ -4,7 +4,6 @@ import { Board, SP, mulberry32 } from '../www/js/board.js';
 import { Engine } from '../www/js/engine.js';
 import { getLevel, LEVEL_COUNT } from '../www/js/levels.js';
 import { createLives, loseLife, refresh, msToNext, addLife, REGEN_MS, MAX_LIVES } from '../www/js/lives.js';
-import { daysSince, moneySaved, guessCurrency, sortedHelplines } from '../www/js/recovery.js';
 
 // Tahtayı elle kurmak için yardımcı: harfler renk, '.' boşluk
 function boardFrom(rows) {
@@ -126,19 +125,4 @@ test('canlar: hepsi bitince 0, reklamla 1 can eklenir, fazla dolmaz', () => {
   assert.equal(s.lives, MAX_LIVES);
 });
 
-test('kurtuluş sayacı', () => {
-  const now = new Date(2026, 9, 4);
-  assert.equal(daysSince('2026-09-04', now), 30);
-  assert.equal(moneySaved({ quitDate: '2026-09-04', dailySpend: 200 }, now), 6000);
-  assert.equal(daysSince(null, now), 0);
-});
 
-test('para birimi ve yardım hattı dile göre seçilir', () => {
-  assert.equal(guessCurrency('tr-TR'), 'TRY');
-  assert.equal(guessCurrency('en-GB'), 'GBP');
-  assert.equal(guessCurrency('de-DE'), 'EUR');
-  assert.equal(guessCurrency('en-US'), 'USD');
-  assert.equal(sortedHelplines('tr-TR')[0].country, 'TR');
-  assert.equal(sortedHelplines('en-GB')[0].country, 'GB');
-  assert.equal(sortedHelplines('en-US')[0].country, 'US');
-});
