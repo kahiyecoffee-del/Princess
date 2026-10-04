@@ -1,7 +1,7 @@
 // Saf oyun mantığı: tahta, eşleşme bulma, özel taşlar, yerçekimi.
 // DOM'a bağımlı değildir; hem tarayıcıda hem Node testlerinde çalışır.
 
-export const SP = { NONE: 0, ROW: 1, COL: 2, BOMB: 3, RAINBOW: 4 };
+export const SP = { NONE: 0, ROW: 1, COL: 2, BOMB: 3, RAINBOW: 4, CROWN: 5 };
 
 export function mulberry32(seed) {
   let a = seed >>> 0;

@@ -997,9 +997,14 @@ async function winFlow() {
   renderer.bigText(t('levelComplete'));
   sfx('win');
   cheer('congratulations', t('congrats'), 2400, 'dance');
-  const leftover = engine.movesLeft;
-  await renderer.celebrate(leftover);
-  const bonus = engine.finishBonus();
+  let bonus = 0;
+  if (engine.movesLeft > 0) {
+    await new Promise((res) => setTimeout(res, 700));
+    renderer.bigText(t('finale'));
+    const fin = engine.finale();
+    bonus = fin.bonus;
+    await renderer.playSteps(fin.steps, (step) => { if (step.type === 'clear' || step.type === 'convert') updateHUD(step.score); });
+  }
   updateHUD();
   renderer.busy = false;
 

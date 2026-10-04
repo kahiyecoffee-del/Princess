@@ -235,3 +235,16 @@ test('çeviriler: her dilde tüm anahtarlar ve aynı yer tutucular var', async (
   assert.equal(t('goal_score', { n: '1.000' }), '1.000 puana ulaş');
   setLang('en');
 });
+
+test('kraliyet finali: kalan hamleler özel taşa dönüşüp patlar', () => {
+  const e = new Engine(getLevel(3), 11);
+  e.movesLeft = 6;
+  const before = e.score;
+  const fin = e.finale(mulberry32(2));
+  assert.equal(fin.converted, 6);
+  assert.equal(e.movesLeft, 0);
+  assert.ok(e.score > before + fin.bonus, 'patlamalar puan getirir');
+  assert.equal(fin.steps[0].type, 'convert');
+  const leftSpecials = e.board.grid.flat().filter((t) => t && t.special && t.special !== SP.CROWN).length;
+  assert.equal(leftSpecials, 0, 'tüm özel taşlar patladı');
+});
