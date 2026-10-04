@@ -73,9 +73,13 @@ export class Engine {
     this.movesUsed++;
     const steps = [{ type: 'swap', a, b }];
     const preferred = [this.board.key(a.r, a.c), this.board.key(b.r, b.c)];
-    let forced = res.forced;
-    let cascade = 0;
+    const cascade = this.resolveAll(steps, preferred, res.forced);
+    return { valid: true, steps, cascade };
+  }
 
+  // Zincirleme temizleme döngüsü: eşleşmeler bitene kadar temizle + düşür.
+  resolveAll(steps, preferred = [], forced = null) {
+    let cascade = 0;
     for (let guard = 0; guard < 60; guard++) {
       const step = this.board.resolveStep(cascade === 0 ? preferred : [], forced);
       forced = null;
@@ -91,14 +95,42 @@ export class Engine {
       steps.push({ type: 'clear', ...step, points, cascade, score: this.score });
       steps.push({ type: 'fall', ...this.board.applyGravity() });
     }
-
     if (!this.board.hasPossibleMove()) {
       const positions = this.board.shuffle();
       steps.push(positions ? { type: 'shuffle', positions } : { type: 'rebuild' });
     }
-
     if (this.goalsMet() || this.movesLeft <= 0) this.finished = true;
+    return cascade;
+  }
+
+  // Güçlendirici: Kraliyet Asası. Seçilen taşı hamle harcamadan kırar.
+  useWand(r, c) {
+    if (this.finished || !this.board.playable(r, c) || !this.board.grid[r][c]) return { valid: false };
+    const forced = { cells: new Set([this.board.key(r, c)]), activations: [], skip: new Set() };
+    const steps = [];
+    const cascade = this.resolveAll(steps, [], forced);
     return { valid: true, steps, cascade };
+  }
+
+  // Güçlendirici: seviye başında tahtaya özel taşlar yerleştirir.
+  // specials: SP değerleri listesi. Yerleştirilen hücreleri döndürür.
+  placeSpecials(specials, rng = Math.random) {
+    const b = this.board;
+    const cells = [];
+    for (let r = 0; r < b.rows; r++) {
+      for (let c = 0; c < b.cols; c++) {
+        const t = b.grid[r][c];
+        if (t && t.special === SP.NONE) cells.push([r, c]);
+      }
+    }
+    const placed = [];
+    for (const sp of specials) {
+      if (!cells.length) break;
+      const [r, c] = cells.splice(Math.floor(rng() * cells.length), 1)[0];
+      b.grid[r][c].special = sp;
+      placed.push({ r, c, tile: b.grid[r][c] });
+    }
+    return placed;
   }
 
   // Seviye kazanıldığında kalan hamleler bonus puana dönüşür.

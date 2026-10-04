@@ -27,11 +27,30 @@
   <section id="screen-map" class="screen" hidden>
     <div class="top-bar">
       <div class="lives-pill" data-lives><span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer"></span></div>
-      <h2>Kingdom Map</h2>
+      <button class="coin-pill" id="btn-coins" aria-label="Coins, open shop"><span class="coin"></span><b id="coin-count">0</b><span class="plus">+</span></button>
       <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
+    </div>
+    <div class="map-atmos" aria-hidden="true">
+      <div class="moonbeam"></div>
+      <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
+      <div class="windows" id="map-windows"></div>
     </div>
     <div class="map-scroll" id="map-scroll">
       <div class="map-path" id="level-grid"></div>
+    </div>
+    <div class="map-dock">
+      <button class="dock-btn" id="btn-daily" aria-label="Daily gift">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="giftG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#b02e5c"/></linearGradient><linearGradient id="ribG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset="1" stop-color="#c58a26"/></linearGradient></defs>
+          <rect x="6" y="16" width="28" height="20" rx="3" fill="url(#giftG)"/><rect x="4" y="11" width="32" height="8" rx="2" fill="url(#giftG)" stroke="#ffd0e0" stroke-width=".8"/>
+          <rect x="17.5" y="11" width="5" height="25" fill="url(#ribG)"/><path d="M20 11c-4-7-11-6-9-1 1 2 6 2 9 1zm0 0c4-7 11-6 9-1-1 2-6 2-9 1z" fill="url(#ribG)"/></svg>
+        <span>Daily</span><i class="dot" id="daily-dot" hidden></i>
+      </button>
+      <button class="dock-btn" id="btn-shop" aria-label="Shop">
+        <svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="chestG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f97ff"/><stop offset="1" stop-color="#22359a"/></linearGradient></defs>
+          <path d="M5 18a15 9 0 0 1 30 0v3H5z" fill="url(#chestG)" stroke="url(#ribG)" stroke-width="2"/><rect x="5" y="21" width="30" height="14" rx="2" fill="url(#chestG)" stroke="url(#ribG)" stroke-width="2"/>
+          <rect x="17" y="18" width="6" height="8" rx="1.5" fill="url(#ribG)"/><circle cx="20" cy="22" r="1.2" fill="#22359a"/><path d="M12 13l1 2 2 .5-2 .5-1 2-1-2-2-.5 2-.5zM29 10l.8 1.6 1.6.4-1.6.4-.8 1.6-.8-1.6-1.6-.4 1.6-.4z" fill="#fff6d8"/></svg>
+        <span>Shop</span>
+      </button>
     </div>
   </section>
 
@@ -45,6 +64,9 @@
     <div class="stage">
       <div class="princess-stage" id="princess-stage"></div>
       <div class="stage-side">
+        <div class="stage-tools">
+          <button class="booster" id="btn-wand" aria-label="Royal Wand"><canvas width="96" height="96"></canvas><b class="count" id="wand-count">0</b></button>
+        </div>
         <div class="speech" id="speech" hidden><span id="speech-text">Amazing!</span></div>
         <div class="hud-score">
           <div class="score-line"><span id="hud-score">0</span><span class="goals" id="hud-goals"></span></div>

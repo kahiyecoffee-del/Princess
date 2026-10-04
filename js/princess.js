@@ -2,7 +2,10 @@
 // The artwork is a still image, so movement comes from three swappable frames
 // (eyes open / blinking / winking) plus CSS motion on layered wrappers.
 
-const FRAMES = { open: 'img/prenses.jpg', blink: 'img/prenses-blink.jpg', wink: 'img/prenses-wink.jpg' };
+const FRAMES = {
+  open: 'img/prenses.jpg', blink: 'img/prenses-blink.jpg', wink: 'img/prenses-wink.jpg',
+  talk1: 'img/prenses-talk1.jpg', talk2: 'img/prenses-talk2.jpg',
+};
 const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -16,11 +19,13 @@ export class Princess {
     host.innerHTML = `
       <div class="pr-aura"></div>
       <div class="pr-frame-box">
-        <div class="pr-sway"><div class="pr-body">
+        <div class="pr-sway"><div class="pr-life"><div class="pr-body">
           <img class="pr-img" src="${FRAMES.open}" alt="The Sky Princess" draggable="false">
           <img class="pr-img pr-alt" data-frame="blink" src="${FRAMES.blink}" alt="" draggable="false">
+          <img class="pr-img pr-alt pr-mouth" data-frame="talk1" src="${FRAMES.talk1}" alt="" draggable="false">
+          <img class="pr-img pr-alt pr-mouth" data-frame="talk2" src="${FRAMES.talk2}" alt="" draggable="false">
           <img class="pr-img pr-alt" data-frame="wink" src="${FRAMES.wink}" alt="" draggable="false">
-        </div></div>
+        </div></div></div>
         <div class="pr-shine"></div>
       </div>
       <div class="pr-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -39,6 +44,15 @@ export class Princess {
     if (!el) return Promise.resolve();
     el.classList.add('on');
     return new Promise((r) => setTimeout(() => { el.classList.remove('on'); r(); }, ms));
+  }
+
+  // Lip movement while she speaks: level 0..1 from the voice's loudness.
+  mouth(level) {
+    const open = level > 0.42 ? 'talk2' : level > 0.12 ? 'talk1' : null;
+    if (open === this.mouthOpen) return;
+    this.mouthOpen = open;
+    this.alts.talk1.classList.toggle('on', open === 'talk1');
+    this.alts.talk2.classList.toggle('on', open === 'talk2');
   }
 
   async blink() {

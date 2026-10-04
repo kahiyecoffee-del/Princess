@@ -345,7 +345,8 @@ input, select {
 .pr-sway { position: absolute; inset: -4%; transform-origin: 50% 100%; animation: sway 7s ease-in-out infinite; }
 .pr-body { position: absolute; inset: 0; transform-origin: 50% 88%; animation: breathe 4.6s ease-in-out infinite; }
 .pr-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; display: block; pointer-events: none; }
-.pr-alt { opacity: 0; }
+.pr-alt { opacity: 0; transition: opacity 70ms linear; }
+.pr-mouth { transition-duration: 45ms; }
 .pr-alt.on { opacity: 1; }
 .pr-shine {
   position: absolute; inset: 0; pointer-events: none;
@@ -481,3 +482,164 @@ input, select {
 @keyframes welcomeOut { 45% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1.12); opacity: 0; } }
 
 .test-voice { margin-top: 12px; }
+
+/* ================= Economy ================= */
+.coin {
+  display: inline-block; width: 1.15em; height: 1.15em; border-radius: 50%; vertical-align: -0.2em; flex: none;
+  background: radial-gradient(circle at 35% 30%, #fffbe6 0 12%, #ffd04d 35%, #c27f08 80%);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 246, 216, 0.9), inset 0 -2px 3px rgba(120, 60, 0, 0.5), 0 0 6px rgba(255, 200, 80, 0.6);
+  position: relative; margin-right: 0.25em;
+}
+.coin::after { content: '♛'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.62em; color: #8a5200; line-height: 1; }
+.coin-pill {
+  display: flex; align-items: center; gap: 4px; padding: 4px 6px 4px 8px; border-radius: 99px; cursor: pointer;
+  background: rgba(10, 14, 48, 0.75); border: 1.5px solid var(--line); color: var(--text); font: 800 17px var(--font-body);
+  backdrop-filter: blur(4px); font-variant-numeric: tabular-nums;
+}
+.coin-pill .plus {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; margin-left: 4px;
+  background: linear-gradient(180deg, #fff0c2, #c58a26); color: #2a1700; font-weight: 900; font-size: 16px; line-height: 1;
+}
+.coin-pill.bump { animation: bump 0.5s cubic-bezier(0.3, 1.6, 0.5, 1); }
+@keyframes bump { 40% { transform: scale(1.18); box-shadow: 0 0 20px rgba(255, 210, 100, 0.9); } }
+
+/* Map dock: daily gift and shop */
+#screen-map { position: fixed; }
+.map-dock {
+  position: absolute; left: 16px; right: 16px; bottom: calc(14px + var(--safe-bottom)); z-index: 5;
+  display: flex; justify-content: space-between; pointer-events: none;
+}
+.dock-btn {
+  pointer-events: auto; position: relative; width: 70px; height: 70px; border-radius: 22px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; padding: 4px;
+  background: linear-gradient(180deg, rgba(42, 54, 144, 0.96), rgba(16, 22, 66, 0.96)); border: 2px solid var(--gold);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55), 0 0 18px rgba(232, 182, 74, 0.35); color: var(--gold-light);
+  font: 800 12px var(--font-body); letter-spacing: 0.04em;
+}
+.dock-btn svg { width: 40px; height: 40px; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5)); }
+.dock-btn .dot {
+  position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; border-radius: 50%;
+  background: #ff4f7a; border: 2px solid #fff; box-shadow: 0 0 10px #ff4f7a; animation: pulse 1.2s infinite;
+}
+.dock-btn:active { transform: scale(0.95); }
+
+/* Shop */
+.shop { text-align: left; }
+.shop-balance { display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 24px; font-weight: 900; margin-bottom: 10px; }
+.shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.shop-card {
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; padding: 10px 8px; min-width: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(111, 151, 255, 0.35), rgba(10, 14, 48, 0.85) 70%);
+  border: 1.5px solid var(--line); border-radius: 16px;
+}
+.shop-card h4 { margin: 2px 0 0; font: 700 14px var(--font-display); color: var(--gold-light); }
+.shop-card p { margin: 0; font-size: 11.5px; color: var(--muted); line-height: 1.3; min-height: 3.9em; }
+.shop-card small { font-size: 12px; color: var(--muted); }
+.btn-buy { width: 100%; margin-top: 6px; padding: 7px 8px; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+.shop-extra { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.shop-extra .btn { font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; }
+.shop-extra small { font-weight: 600; opacity: 0.85; }
+
+/* Daily gift calendar */
+.daily p { margin: 0 0 10px; }
+.daily-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.daily-day {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-radius: 12px; min-width: 0;
+  background: rgba(10, 14, 48, 0.75); border: 1.5px solid rgba(232, 182, 74, 0.25); font-size: 14px;
+}
+.daily-day:last-child { grid-column: span 2; background: radial-gradient(circle at 50% 30%, rgba(255, 122, 168, 0.35), rgba(10, 14, 48, 0.85)); }
+.daily-day small { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+.daily-day em { font-style: normal; font-size: 9.5px; color: var(--rose); line-height: 1.1; text-align: center; }
+.daily-day.got { opacity: 0.45; }
+.daily-day.got::after { content: '✓'; color: var(--emerald); font-weight: 900; }
+.daily-day.today { border-color: var(--gold); box-shadow: 0 0 16px rgba(232, 182, 74, 0.7); animation: nodeglow 1.8s infinite; }
+
+/* Pre-level booster picker */
+.booster-pick { margin-top: 6px; }
+.booster-pick > small { display: block; font: 700 11px var(--font-body); letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.booster-row { display: flex; justify-content: center; gap: 10px; }
+.booster-opt {
+  position: relative; width: 66px; height: 66px; border-radius: 18px; padding: 0; cursor: pointer; display: grid; place-items: center;
+  background: rgba(10, 14, 48, 0.8); border: 2px solid rgba(232, 182, 74, 0.35); color: #fff;
+}
+.booster-opt.on { border-color: var(--gold-light); background: radial-gradient(circle, rgba(232, 182, 74, 0.45), rgba(10, 14, 48, 0.85)); box-shadow: 0 0 16px rgba(232, 182, 74, 0.8); }
+.booster-opt.on::after { content: '✓'; position: absolute; top: -6px; left: -6px; width: 20px; height: 20px; border-radius: 50%; background: var(--emerald); font-size: 12px; font-weight: 900; display: grid; place-items: center; border: 2px solid #fff; }
+.booster-opt .count, .booster .count {
+  position: absolute; bottom: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px;
+  background: linear-gradient(180deg, #ff9cc0, #c43a72); border: 2px solid #fff; font-size: 12px; display: grid; place-items: center;
+}
+.booster-opt .price { position: absolute; bottom: -9px; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: 11px; padding: 1px 6px; border-radius: 9px; background: rgba(10, 14, 48, 0.95); border: 1px solid var(--line); display: flex; align-items: center; }
+.booster-opt.empty canvas { opacity: 0.55; }
+
+/* In-game wand */
+.stage-tools { display: flex; justify-content: flex-end; }
+.booster {
+  position: relative; width: 50px; height: 50px; border-radius: 50%; padding: 0; cursor: pointer; display: grid; place-items: center;
+  background: radial-gradient(circle at 40% 30%, #2a3690, #0d1240); border: 2px solid var(--gold);
+  box-shadow: 0 0 14px rgba(232, 182, 74, 0.45); color: #fff;
+}
+.booster canvas { width: 40px; height: 40px; }
+.booster.active { animation: nodeglow 1s infinite; background: radial-gradient(circle, rgba(232, 182, 74, 0.6), #0d1240); }
+.booster.empty .count { background: linear-gradient(180deg, #fff0c2, #c58a26); color: #2a1700; }
+.board-frame.wand-on { box-shadow: 0 0 0 3px rgba(255, 236, 170, 0.9), 0 0 40px rgba(255, 220, 140, 0.8); border-radius: 18px; }
+.reward { display: inline-flex; align-items: center; gap: 2px; margin-top: 4px; padding: 4px 14px; border-radius: 99px; font-size: 20px; font-weight: 900;
+  background: rgba(10, 14, 48, 0.8); border: 1.5px solid var(--gold); animation: pop 0.5s 0.9s backwards; }
+
+/* ================= Map scenery (closer to the princess artwork) ================= */
+.backdrop { transition: opacity 0.6s; }
+body[data-screen="map"] .backdrop {
+  background:
+    radial-gradient(ellipse at 50% 115%, rgba(74, 125, 255, 0.3), transparent 55%),
+    linear-gradient(180deg, rgba(8, 11, 38, 0.12) 0%, rgba(8, 11, 38, 0.18) 45%, rgba(8, 11, 38, 0.62) 100%),
+    url('../img/harita.jpg') center top / cover no-repeat,
+    var(--night);
+  transform: scale(1.1) translateY(var(--par, 0%));
+  transition: transform 0.25s ease-out;
+}
+.map-atmos { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.map-scroll, .top-bar, .map-dock { position: relative; z-index: 1; }
+.map-dock { position: absolute; }
+.moonbeam {
+  position: absolute; top: -20%; left: 30%; width: 70%; height: 90%;
+  background: linear-gradient(200deg, rgba(190, 210, 255, 0.22), rgba(190, 210, 255, 0) 60%);
+  transform: rotate(-12deg); filter: blur(8px); animation: beam 9s ease-in-out infinite;
+}
+@keyframes beam { 50% { opacity: 0.55; } }
+.cloud {
+  position: absolute; width: 140%; height: 30%; left: -20%; border-radius: 50%; filter: blur(14px); opacity: 0.5;
+  background: radial-gradient(ellipse 35% 45% at 30% 50%, rgba(170, 180, 240, 0.4), transparent 70%),
+    radial-gradient(ellipse 30% 40% at 70% 55%, rgba(150, 160, 230, 0.35), transparent 70%);
+}
+.cloud.c1 { top: 18%; animation: drift 70s linear infinite; }
+.cloud.c2 { top: 52%; opacity: 0.35; animation: drift 95s linear infinite reverse; }
+.cloud.c3 { top: 78%; opacity: 0.45; height: 26%; animation: drift 80s linear infinite; }
+@keyframes drift { from { transform: translateX(-12%); } 50% { transform: translateX(12%); } to { transform: translateX(-12%); } }
+.windows { position: absolute; inset: 0; }
+.windows i {
+  position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #ffd98a;
+  box-shadow: 0 0 6px 2px rgba(255, 200, 110, 0.75); animation: windowGlow 3s ease-in-out infinite; opacity: 0.2;
+}
+@keyframes windowGlow { 50% { opacity: 1; } }
+body[data-screen="map"] #sky { opacity: 0.75; }
+.node:not(.locked) { box-shadow: 0 0 0 3px rgba(10, 14, 48, 0.9), 0 0 0 4.5px rgba(232, 182, 74, 0.55), 0 6px 14px rgba(0, 0, 0, 0.6), 0 0 22px rgba(74, 125, 255, 0.55); }
+.node.locked { background: radial-gradient(circle at 35% 30%, rgba(90, 96, 140, 0.9), rgba(29, 33, 66, 0.92) 75%); }
+.road-base { stroke: rgba(6, 9, 32, 0.7); }
+@media (prefers-reduced-motion: reduce) { .cloud, .moonbeam, .windows i { animation: none; } body[data-screen="map"] .backdrop { transition: none; } }
+
+/* ---------- More lifelike idle motion ----------
+   Three layers move on different, non-matching rhythms so the loop never looks mechanical:
+   sway (7s), "life" micro-shifts (11.3s) and breathing (4.6s, chest rises more than the head). */
+.pr-life { position: absolute; inset: 0; animation: life 11.3s ease-in-out infinite; transform-origin: 50% 70%; }
+@keyframes life {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  22% { transform: translate(0.6%, -0.3%) rotate(0.5deg); }
+  47% { transform: translate(-0.4%, 0.2%) rotate(-0.3deg); }
+  71% { transform: translate(0.3%, -0.5%) rotate(0.7deg); }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1, 1) translateY(0); }
+  38% { transform: scale(1.006, 1.026) translateY(-0.9%); }
+  52% { transform: scale(1.006, 1.028) translateY(-1%); }
+  80% { transform: scale(1.001, 1.004) translateY(-0.1%); }
+}
+@media (prefers-reduced-motion: reduce) { .pr-life { animation: none; } }
