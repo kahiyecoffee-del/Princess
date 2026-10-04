@@ -6,7 +6,7 @@ import { MAX_LIVES, refresh, loseLife, addLife, msToNext, formatMs } from './liv
 import { Capacitor, registerPlugin } from '../vendor/capacitor-core.js';
 import { initAds, showInterstitial, showRewarded, AD_CONFIG } from './ads.js';
 import { play as sfx, setSoundEnabled } from './audio.js';
-import { say, giggle, setTrack, holdMusic, setVoiceEnabled, setMusicEnabled, whenUnlocked } from './voice.js';
+import { say, giggle, setTrack, holdMusic, setVoiceEnabled, setMusicEnabled, setGreeting } from './voice.js';
 import { Princess } from './princess.js';
 
 // How many times per attempt the player can watch an ad for +3 moves.
@@ -187,6 +187,11 @@ $('#btn-settings').addEventListener('click', () => {
     });
     body.append(row);
   }
+  const test = document.createElement('button');
+  test.className = 'btn btn-ghost test-voice';
+  test.textContent = '▶ Test her voice';
+  test.addEventListener('click', () => say(pick(['hi', 'tickles', 'amazing'])));
+  body.append(test);
   modal({ title: 'Settings', body, buttons: [{ label: 'Done', value: 'ok', cls: 'btn-primary' }] });
 });
 
@@ -652,7 +657,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) save(
 show('home');
 initAds();
 // Greet the player on the first tap (browsers only allow sound after a tap)
-whenUnlocked(() => { if (currentScreen === 'home') say(state.maxLevel > 1 ? 'welcome' : 'hi'); });
+setGreeting(() => (currentScreen === 'home' ? (state.maxLevel > 1 ? 'welcome' : 'hi') : null));
 
 // Welcome screen: one tap anywhere and the princess winks, then the map opens.
 let leavingWelcome = false;
