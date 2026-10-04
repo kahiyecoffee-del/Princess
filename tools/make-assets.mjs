@@ -8,12 +8,16 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const html = readFileSync(join(root, 'www/index.html'), 'utf8');
-const defs = html.match(/<defs>[\s\S]*?<\/defs>/)[0];
-const princess = html.match(/<symbol id="princess"[^>]*>([\s\S]*?)<\/symbol>/)[1];
+// Prenses görselleri (www/img) data URI olarak sayfalara gömülür.
+const imgData = (f) => `data:image/jpeg;base64,${readFileSync(join(root, 'www/img', f)).toString('base64')}`;
+const PORTRAIT = imgData('prenses.jpg');
+const FACE = imgData('prenses-yuz.jpg');
 
 const BG = 'radial-gradient(ellipse at 50% 110%, #b23a9c 0%, #4a1477 45%, #1a0636 100%)';
-const svg = (size) => `<svg viewBox="0 0 200 220" width="${size}" height="${size * 1.1}">${defs}${princess}</svg>`;
+// Yüz yakın planı: yuvarlak, altın çerçeveli
+const face = (size, border = Math.max(2, size / 40)) => `<img src="${FACE}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;border:${border}px solid #ffd34d;box-shadow:0 0 ${size / 6}px rgba(140,120,255,.7)">`;
+// Kemer çerçeveli portre
+const portrait = (w) => `<img src="${PORTRAIT}" style="width:${w}px;height:${w * 1.25}px;object-fit:cover;object-position:50% 18%;border-radius:50% 50% ${w / 14}px ${w / 14}px / 38% 38% ${w / 14}px ${w / 14}px;border:${Math.max(2, w / 90)}px solid #ffd34d;box-shadow:0 0 ${w / 8}px rgba(140,120,255,.6)">`;
 const stars = (n, w, h, seed = 7) => {
   let s = seed; const r = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
   return Array.from({ length: n }, () => `<i style="left:${r() * w}px;top:${r() * h}px;width:${1 + r() * 3}px;height:${1 + r() * 3}px;opacity:${0.4 + r() * 0.6}"></i>`).join('');
@@ -22,7 +26,6 @@ const page = (w, h, body, bg = BG) => `<!doctype html><html><head><meta charset=
 <style>html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden;background:${bg}}
 .c{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
 i{position:absolute;background:#fff;border-radius:50%}
-svg{filter:drop-shadow(0 0 ${Math.round(w / 30)}px rgba(255,150,230,.8))}
 h1{margin:0;font:800 ${Math.round(h / 6)}px/0.95 system-ui,sans-serif;text-align:center;
 background:linear-gradient(180deg,#fff9c4,#ffd34d 45%,#ff8ad8);-webkit-background-clip:text;color:transparent;
 filter:drop-shadow(0 4px 0 #6a1080)}
@@ -43,14 +46,15 @@ const DENS = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
 
 for (const [d, k] of Object.entries(DENS)) {
   const s = Math.round(48 * k);
-  const icon = page(s, s, `${stars(8, s, s)}<div class="c">${svg(s * 0.78)}</div>`);
+  const icon = page(s, s, `<img src="${FACE}" style="width:${s}px;height:${s}px;object-fit:cover">`);
   await shot(`${res}/mipmap-${d}/ic_launcher.png`, s, s, icon);
   // Yuvarlak ikon: köşeler şeffaf
-  const round = page(s, s, `<div style="position:absolute;inset:0;border-radius:50%;overflow:hidden;background:${BG}">${stars(8, s, s)}<div class="c">${svg(s * 0.74)}</div></div>`, 'transparent');
+  const round = page(s, s, `<img src="${FACE}" style="width:${s}px;height:${s}px;border-radius:50%;object-fit:cover">`, 'transparent');
   await shot(`${res}/mipmap-${d}/ic_launcher_round.png`, s, s, round, { transparent: true });
   // Uyarlanabilir ikon ön katmanı: güvenli alan ortadaki %61
   const f = Math.round(108 * k);
-  const fg = page(f, f, `<div class="c">${svg(f * 0.5)}</div>`, 'transparent');
+  // Uyarlanabilir ikon: tüm katman yüz görseli; launcher maske ile kırpar
+  const fg = page(f, f, `<img src="${FACE}" style="width:${f}px;height:${f}px;object-fit:cover">`, 'transparent');
   await shot(`${res}/mipmap-${d}/ic_launcher_foreground.png`, f, f, fg, { transparent: true });
 }
 
@@ -62,14 +66,14 @@ const splashSizes = {
 };
 for (const [f, [w, h]] of Object.entries(splashSizes)) {
   const m = Math.min(w, h);
-  await shot(`${res}/${f}`, w, h, page(w, h, `${stars(Math.round((w * h) / 6000), w, h)}<div class="c">${svg(m * 0.45)}</div>`));
+  await shot(`${res}/${f}`, w, h, page(w, h, `${stars(Math.round((w * h) / 6000), w, h)}<div class="c">${face(Math.round(m * 0.42))}</div>`));
 }
 
 // Google Play mağaza görselleri
 const store = join(root, 'store');
-await shot(`${store}/ikon-512.png`, 512, 512, page(512, 512, `${stars(30, 512, 512)}<div class="c">${svg(400)}</div>`));
+await shot(`${store}/ikon-512.png`, 512, 512, page(512, 512, `<img src="${FACE}" style="width:512px;height:512px;object-fit:cover">`));
 await shot(`${store}/one-cikan-gorsel-1024x500.png`, 1024, 500, page(1024, 500,
-  `${stars(80, 1024, 500)}<div class="c" style="flex-direction:row;gap:40px">${svg(300)}<div><h1>Gökyüzü<br>Prensesi</h1><p>Yıldızları eşleştir, gökyüzünü aydınlat ✨</p></div></div>`));
+  `${stars(80, 1024, 500)}<div class="c" style="flex-direction:row;gap:48px">${portrait(300)}<div><h1>Gökyüzü<br>Prensesi</h1><p>Yıldızları eşleştir, gökyüzünü aydınlat ✨</p></div></div>`));
 
 await browser.close();
 console.log('Görseller üretildi.');

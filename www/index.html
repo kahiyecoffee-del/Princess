@@ -7,46 +7,11 @@
   <title>Gökyüzü Prensesi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="img/prenses.jpg">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <canvas id="sky"></canvas>
-
-  <!-- Prenses karakteri (özgün çizim) -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <defs>
-      <linearGradient id="hairG" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#ffb3e6"/><stop offset="1" stop-color="#c86bff"/>
-      </linearGradient>
-      <linearGradient id="crownG" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#fff6b0"/><stop offset="1" stop-color="#ffb300"/>
-      </linearGradient>
-      <radialGradient id="skinG" cx="0.45" cy="0.4" r="0.7">
-        <stop offset="0" stop-color="#fff1ea"/><stop offset="1" stop-color="#ffd2c2"/>
-      </radialGradient>
-    </defs>
-    <symbol id="princess" viewBox="0 0 200 220">
-      <path d="M30 120 C10 60 50 18 100 18 C150 18 190 60 170 120 C185 170 165 205 140 212 L60 212 C35 205 15 170 30 120Z" fill="url(#hairG)"/>
-      <path d="M58 170 Q100 200 142 170 L150 215 L50 215Z" fill="#7a3cff"/>
-      <path d="M70 175 Q100 192 130 175" stroke="#ffd34d" stroke-width="4" fill="none"/>
-      <ellipse cx="100" cy="110" rx="55" ry="60" fill="url(#skinG)"/>
-      <path d="M45 100 C50 55 80 45 100 60 C120 45 150 55 155 100 C140 80 120 72 100 82 C80 72 60 80 45 100Z" fill="url(#hairG)"/>
-      <path d="M62 38 L72 8 L86 30 L100 0 L114 30 L128 8 L138 38Z" fill="url(#crownG)" stroke="#fff" stroke-width="2"/>
-      <circle cx="100" cy="22" r="6" fill="#ff4f9a"/>
-      <circle cx="74" cy="28" r="4" fill="#4cc3ff"/>
-      <circle cx="126" cy="28" r="4" fill="#4cc3ff"/>
-      <ellipse cx="78" cy="112" rx="10" ry="13" fill="#3a1060"/>
-      <ellipse cx="122" cy="112" rx="10" ry="13" fill="#3a1060"/>
-      <circle cx="82" cy="107" r="4" fill="#fff"/>
-      <circle cx="126" cy="107" r="4" fill="#fff"/>
-      <circle cx="75" cy="117" r="2" fill="#fff"/>
-      <circle cx="119" cy="117" r="2" fill="#fff"/>
-      <ellipse cx="66" cy="132" rx="9" ry="5" fill="#ff8fbf" opacity="0.6"/>
-      <ellipse cx="134" cy="132" rx="9" ry="5" fill="#ff8fbf" opacity="0.6"/>
-      <path d="M90 138 Q100 147 110 138" stroke="#b3155c" stroke-width="3.5" fill="none" stroke-linecap="round"/>
-      <path d="M150 70 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4z" fill="#fff"/>
-    </symbol>
-  </svg>
 
   <!-- ANA MENÜ -->
   <section id="screen-home" class="screen">
@@ -57,7 +22,7 @@
       <button class="icon-btn" id="btn-sound" aria-label="Ses">🔊</button>
     </div>
     <div class="home-hero">
-      <svg class="princess-big" viewBox="0 0 200 220"><use href="#princess"/></svg>
+      <div class="portrait"><img src="img/prenses.jpg" alt="Gökyüzü Prensesi" width="900" height="900"></div>
       <h1 class="logo"><span>Gökyüzü</span><span>Prensesi</span></h1>
       <p class="tagline">Yıldızları eşleştir, gökyüzünü aydınlat ✨</p>
     </div>
@@ -87,7 +52,7 @@
       <div class="hud-moves"><b id="hud-moves">25</b><small>hamle</small></div>
     </div>
     <div class="hud2">
-      <svg class="princess-small" id="princess-small" viewBox="0 0 200 220"><use href="#princess"/></svg>
+      <img class="princess-small" id="princess-small" src="img/prenses-yuz.jpg" alt="" width="256" height="256">
       <div class="hud-score">
         <div class="score-line"><span id="hud-score">0</span><span class="goals" id="hud-goals"></span></div>
         <div class="progress"><div class="progress-fill" id="hud-progress"></div>

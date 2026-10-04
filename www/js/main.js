@@ -279,7 +279,7 @@ async function handleSwap(a, b) {
 function castPrincess() {
   const el = $('#princess-small');
   el.classList.remove('cast');
-  void el.getBBox();
+  void el.offsetWidth;
   el.classList.add('cast');
 }
 
