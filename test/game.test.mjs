@@ -248,3 +248,36 @@ test('kraliyet finali: kalan hamleler özel taşa dönüşüp patlar', () => {
   const leftSpecials = e.board.grid.flat().filter((t) => t && t.special && t.special !== SP.CROWN).length;
   assert.equal(leftSpecials, 0, 'tüm özel taşlar patladı');
 });
+
+test('günlük görevler ve başarımlar', async () => {
+  const Q = await import('../www/js/quests.js');
+  const day = new Date(2026, 9, 4, 12);
+  const a = Q.questsFor(day);
+  assert.equal(a.length, 3);
+  assert.equal(new Set(a).size, 3);
+  assert.deepEqual(Q.questsFor(new Date(2026, 9, 4, 23)), a); // aynı gün aynı görevler
+  const state = { coins: 0 };
+  Q.ensureQuests(state, day);
+  for (const id of a) {
+    const def = Q.QUEST_POOL.find((d) => d.id === id);
+    assert.equal(Q.claimQuest(state, id, day), 0); // henüz bitmedi
+    Q.track(state, def.ev, def.n + 5, day);
+    assert.equal(Q.claimQuest(state, id, day), def.coins);
+    assert.equal(Q.claimQuest(state, id, day), 0); // iki kez alınmaz
+  }
+  assert.equal(Q.claimBonus(state, day), Q.ALL_DONE_BONUS);
+  assert.equal(Q.claimBonus(state, day), 0);
+  // Ertesi gün sıfırlanır, istatistikler kalır
+  const next = new Date(2026, 9, 5, 9);
+  assert.equal(Q.questList(state, next).every((q) => q.prog === 0 && !q.claimed), true);
+  // Başarım kademeleri
+  state.stats.win = 12;
+  const before = state.coins;
+  assert.equal(Q.claimAchievement(state, 'winner'), 100);
+  assert.equal(Q.claimAchievement(state, 'winner'), 0); // 50'ye ulaşmadı
+  assert.equal(state.coins, before + 100);
+  Q.track(state, 'streak', 4, next);
+  Q.track(state, 'streak', 2, next);
+  assert.equal(state.stats.bestStreak, 4);
+  assert.equal(Q.achievementList(state).find((x) => x.id === 'devoted').ready, true);
+});
