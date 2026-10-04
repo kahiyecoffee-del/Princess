@@ -298,6 +298,12 @@ async function startLevel(n) {
   return true;
 }
 
+// Small gold crown used as the target-score icon.
+const CROWN_ICON = `<svg class="goal-icon" viewBox="0 0 24 20" aria-label="Target"><defs><linearGradient id="crownGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset=".55" stop-color="#e8b64a"/><stop offset="1" stop-color="#a8741c"/></linearGradient></defs>
+  <path d="M2 16 L1 5 L7 10 L12 2 L17 10 L23 5 L22 16 Z" fill="url(#crownGold)" stroke="#fff6d8" stroke-width="1" stroke-linejoin="round"/>
+  <rect x="2" y="16" width="20" height="3" rx="1" fill="url(#crownGold)" stroke="#fff6d8" stroke-width=".8"/>
+  <circle cx="12" cy="11" r="1.8" fill="#e8325a"/><circle cx="6.5" cy="12.5" r="1.2" fill="#3577ff"/><circle cx="17.5" cy="12.5" r="1.2" fill="#3577ff"/></svg>`;
+
 function buildGoalsUI() {
   const wrap = $('#hud-goals');
   wrap.innerHTML = '';
@@ -315,7 +321,7 @@ function buildGoalsUI() {
   } else if (L.kind === 'ice') {
     wrap.innerHTML = '<span class="goal" data-ice>🧊 <b></b></span>';
   } else {
-    wrap.innerHTML = `<span class="goal">🎯 <b>${L.targetScore.toLocaleString('en-US')}</b></span>`;
+    wrap.innerHTML = `<span class="goal">${CROWN_ICON}<b>${L.targetScore.toLocaleString('en-US')}</b></span>`;
   }
   // Star positions on the progress bar
   const max = L.starScores[2];
