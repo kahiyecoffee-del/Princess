@@ -1,3 +1,5 @@
+import { Capacitor, registerPlugin } from '../vendor/capacitor-core.js';
+
 // Reklam katmanı. Android'de AdMob (@capacitor-community/admob) kullanır;
 // tarayıcıda test için sahte bir reklam ekranı gösterir.
 //
@@ -13,7 +15,9 @@ export const AD_CONFIG = {
   INTERSTITIAL_EVERY_N_LEVELS: 5,
 };
 
-const AdMob = () => window.Capacitor?.isNativePlatform?.() ? window.Capacitor.Plugins?.AdMob : null;
+// Capacitor 8'de yerel eklentiler registerPlugin ile kaydedilmeden JS'ten erişilemez.
+const AdMobPlugin = registerPlugin('AdMob');
+const AdMob = () => (Capacitor.isNativePlatform() ? AdMobPlugin : null);
 
 let initialized = false;
 let interstitialReady = false;

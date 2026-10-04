@@ -3,6 +3,7 @@ import { getLevel, LEVEL_COUNT, describeGoal } from './levels.js';
 import { Renderer, drawGem } from './render.js';
 import { load, save } from './storage.js';
 import { MAX_LIVES, refresh, loseLife, addLife, msToNext, formatMs } from './lives.js';
+import { Capacitor, registerPlugin } from '../vendor/capacitor-core.js';
 import { initAds, showInterstitial, showRewarded, AD_CONFIG } from './ads.js';
 import { play as sfx, setSoundEnabled } from './audio.js';
 import {
@@ -536,11 +537,12 @@ $('#btn-urge').addEventListener('click', async () => {
 }());
 
 // Android geri tuşu (@capacitor/app)
-window.Capacitor?.Plugins?.App?.addListener('backButton', () => {
+const AppPlugin = Capacitor.isNativePlatform() ? registerPlugin('App') : null;
+AppPlugin?.addListener('backButton', () => {
   if (!$('#modal').hidden || !$('#mock-ad').hidden) return;
   if (currentScreen === 'game') $('#btn-quit').click();
   else if (currentScreen !== 'home') show('home');
-  else window.Capacitor.Plugins.App.minimizeApp();
+  else AppPlugin.minimizeApp();
 });
 
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(state); });

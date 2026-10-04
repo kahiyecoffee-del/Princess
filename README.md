@@ -44,24 +44,56 @@ npm run simulate     # seviyelerin yapay oyuncuya göre kazanma oranları
 
 Tarayıcıda reklamlar yerine 3 saniyelik sahte bir "REKLAM ALANI" ekranı çıkar.
 
-## Android'e paketleme
+## 📱 Telefondan yayınlama (bilgisayar gerekmez)
+
+Uygulama dosyası (.aab) GitHub'ın sunucularında otomatik derlenir. Her şey iPhone'daki Safari'den yapılabilir.
+
+### 1. İmza anahtarını GitHub Secrets'a ekle (bir kez)
+Google Play her dosyanın aynı "yükleme anahtarı" ile imzalanmasını ister. Bu anahtar **asla depoya konmaz**;
+yalnızca GitHub'ın gizli kasasında (Secrets) durur.
+
+1. Safari'de depo sayfası → **Settings** (görünmüyorsa "aA" → *Masaüstü Web Sitesi İste*)
+2. **Secrets and variables → Actions → New repository secret** ile iki gizli değer ekle:
+   - `KEYSTORE_BASE64`: anahtar dosyasının base64 metni
+   - `KEYSTORE_PASSWORD`: anahtarın şifresi
+3. Anahtar dosyasını ve şifreyi iCloud'da güvenli bir yerde de sakla. Kaybedersen Play Console destek
+   ekibinden yükleme anahtarını sıfırlatman gerekir.
+
+### 2. Uygulamayı derle
+**Actions → Android derlemesi → Run workflow**. 5-10 dakika sürer. Bittiğinde depo sayfasındaki **Releases**
+bölümünde `gokyuzu-prensesi-N.aab` dosyası çıkar; dokunup **Dosyalar**'a indir.
+Kodda her değişiklikte derleme kendiliğinden de çalışır ve sürüm numarası otomatik artar.
+
+### 3. Google Play Console
+1. `play.google.com/console` → geliştirici hesabı aç (tek seferlik 25 $, kimlik doğrulama istenir).
+2. **Uygulama oluştur** → ad: Gökyüzü Prensesi, tür: Oyun, ücretsiz.
+3. **Mağaza girişi**: `store/` klasöründeki ikon (512), öne çıkan görsel (1024×500) ve 4 ekran görüntüsünü yükle.
+4. **Test → Kapalı test** → yeni sürüm → indirdiğin `.aab` dosyasını yükle.
+5. ⚠️ **Yeni kişisel hesaplar** için Google kuralı: üretime (herkese açık) geçmeden önce **en az 12 kişinin
+   14 gün boyunca kapalı testte** olması gerekir. Test edenlerin **Android telefonu** olmalı.
+   Kurumsal (şirket) hesaplarda bu kural yok.
+
+### 4. AdMob (gerçek reklam geliri)
+1. `admob.google.com` → uygulama ekle (Android) → bir **Geçiş** ve bir **Ödüllü** reklam birimi oluştur.
+2. Uygulama kimliğini (`~` içeren) **Settings → Secrets and variables → Actions → Variables** sekmesine
+   `ADMOB_APP_ID` adıyla ekle.
+3. Reklam birimi kimliklerini `www/js/ads.js` dosyasına yaz ve `TESTING: false` yap.
+
+### Görselleri yeniden üretmek
+`node tools/make-assets.mjs` (ikon, açılış ekranı, mağaza görselleri) ve `npm start` açıkken
+`node tools/store-screenshots.mjs` (ekran görüntüleri). İkisi de `playwright` paketini ister.
+
+## Bilgisayarla Android'e paketleme
 
 Gerekenler: Node 18+, Android Studio (JDK 17 ile birlikte gelir).
 
 ```bash
 npm install
-npx cap add android
 npx cap sync android
 ```
 
-Sonra `android/app/src/main/AndroidManifest.xml` dosyasında `<application>` etiketinin içine AdMob uygulama kimliğini ekleyin
-(eklenmezse uygulama açılışta çöker):
-
-```xml
-<meta-data
-    android:name="com.google.android.gms.ads.APPLICATION_ID"
-    android:value="ca-app-pub-3940256099942544~3347511713"/>
-```
+AdMob uygulama kimliği `AndroidManifest.xml`'e derleme sırasında `ADMOB_APP_ID` ortam değişkeninden yazılır
+(verilmezse Google'ın test kimliği kullanılır).
 
 `npx cap open android` ile Android Studio'yu açıp önce emülatörde/telefonda çalıştırın.
 Yayın için: **Build → Generate Signed Bundle / APK → Android App Bundle (.aab)**. Anahtar dosyanızı (`.jks`) güvenli
@@ -71,7 +103,7 @@ bir yerde saklayın; kaybederseniz uygulamayı güncelleyemezsiniz.
 
 1. **AdMob hesabı** açın (admob.google.com), uygulamayı ekleyin, bir *Geçiş (Interstitial)* ve bir *Ödüllü (Rewarded)* reklam birimi oluşturun.
 2. `www/js/ads.js` içindeki `INTERSTITIAL_ID` ve `REWARDED_ID` değerlerini kendi kimliklerinizle değiştirin, `TESTING: false` yapın.
-3. Uygulama kimliğini (`~` içeren) hem `AndroidManifest.xml` hem `capacitor.config.json` içinde güncelleyin.
+3. Uygulama kimliğini (`~` içeren) `ADMOB_APP_ID` olarak verin (GitHub Variables veya ortam değişkeni).
 4. `capacitor.config.json` içindeki `appId` (`com.gokyuzuprensesi.oyun`) değerini size ait bir paket adıyla değiştirin; yayından sonra değiştirilemez.
 5. AdMob'da **GDPR onay mesajını** (Privacy & messaging) oluşturun; kod, AB kullanıcılarına formu otomatik gösterir.
 6. **Gizlilik politikası** sayfası hazırlayın (AdMob kullanıldığı için Play Console zorunlu tutar).
