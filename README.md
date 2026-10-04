@@ -13,6 +13,10 @@ Gerçek para, bahis veya şans çarkı içermeyen, sakinleştirici ve reklam gel
 | Seviyeler | 200 seviye: puan, taş toplama ve kristal buz kırma hedefleri. Her 10 seviyenin son ikisi "zor seviye" |
 | Zorluk | Seviye arttıkça daha az hamle, daha çok renk, daha yüksek hedef, tahtada boşluklar, çift katlı buz |
 | Ekonomi | Altın para: seviye ödülleri (ilk geçiş + yıldıza göre), 7 günlük giriş hediyesi, reklam izle +40 (günde 5). Kraliyet Marketi: Comet Lance, Star Bomb, Celestial Orb (seviye başı güçlendiriciler), Royal Wand (oyun içi), can doldurma, +5 hamle |
+| Elde tutma | Kazanma serisi (seviye başı bonus), hafta sonu **Yıldız Festivali** (2× altın, yıldız parçası ödülleri), her 10 seviyede seslendirilmiş bölüm hikâyesi, prensesin ağzından yerel bildirimler |
+| Büyüme | Davet kodu (yeni oyuncuya 500 altın) ve günlük paylaşım ödülü |
+| Satın alma | Google Play Billing 9: altın paketleri ve kalıcı **reklamsız** paket |
+| Diller | İngilizce, Türkçe, İspanyolca, Portekizce (telefon diline göre otomatik; ayarlardan değiştirilebilir). Prensesin sesi İngilizce, konuşma balonları altyazı gibi çevrilir |
 | Can | En fazla **5 can**, her can **30 dakikada** yenilenir. Seviye kaybedilince veya yarıda bırakılınca 1 can gider |
 | Reklamlar | **90 saniyelik oyundan sonra** (veya her 5 seviyede) bir sonraki doğal molada otomatik geçiş reklamı — oyunun ortasında asla açılmaz; hamle bitince **reklam izle → +3 hamle** (deneme başına en fazla 2 kez); can bitince reklam izle → +1 can |
 | Prenses | Nefes alan, göz kırpan, cilveli hareketler yapan ve İngilizce konuşan karakter; dokununca kıkırdar |
@@ -83,6 +87,26 @@ Kodda her değişiklikte derleme kendiliğinden de çalışır ve sürüm numara
 2. Uygulama kimliğini (`~` içeren) **Settings → Secrets and variables → Actions → Variables** sekmesine
    `ADMOB_APP_ID` adıyla ekle.
 3. Reklam birimi kimliklerini `www/js/ads.js` dosyasına yaz ve `TESTING: false` yap.
+
+### 5. Uygulama içi ürünler (gerçek parayla satış)
+Play Console → **Para kazanma → Ürünler → Uygulama içi ürünler** bölümünde şu kimliklerle ürün oluşturun
+(kimlikler birebir aynı olmalı; fiyatı siz belirlersiniz, Play her ülkenin parasına çevirir):
+
+| Ürün kimliği | Ne verir | Önerilen fiyat |
+|---|---|---|
+| `coins_500` | 500 altın | 0,99 $ |
+| `coins_1200` | 1.200 altın | 1,99 $ |
+| `coins_3000` | 3.000 altın | 4,99 $ |
+| `coins_6500` | 6.500 altın | 9,99 $ |
+| `no_ads` | Zorunlu reklamları kalıcı kaldırır | 2,99 $ |
+
+Ürünler yalnızca uygulama Play'e (en az kapalı teste) yüklendikten sonra çalışır. Test için Play Console →
+**Lisans testi** bölümüne kendi Google hesabınızı ekleyin; böylece gerçek para ödemeden deneyebilirsiniz.
+Not: satın almalar cihazda doğrulanıyor; oyun büyürse sunucu tarafı doğrulama eklenmesi önerilir.
+
+### 6. Bildirimler
+Prensesin hatırlatmaları cihazda zamanlanır (sunucu gerekmez). Android 13+ oyuncuya ilk seviyeyi geçtiğinde izin
+sorulur. Play politikası gereği "kesin alarm" izni bilerek kaldırıldı.
 
 ### Görselleri yeniden üretmek
 `node tools/make-assets.mjs` (ikon, açılış ekranı, mağaza görselleri) ve `npm start` açıkken

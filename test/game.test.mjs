@@ -217,3 +217,21 @@ test('davet kodu: kendi kodu, geçersiz, bir kez kullanım, günlük paylaşım 
   assert.ok(grantShareReward(st, d));
   assert.equal(grantShareReward(st, d), false);
 });
+
+test('çeviriler: her dilde tüm anahtarlar ve aynı yer tutucular var', async () => {
+  const { DICTIONARIES, t, setLang, detectLang } = await import('../www/js/i18n.js');
+  const en = DICTIONARIES.en;
+  for (const [code, d] of Object.entries(DICTIONARIES)) {
+    for (const k of Object.keys(en)) {
+      assert.ok(k in d, `${code} eksik: ${k}`);
+      const ph = (s) => (s.match(/\{\w+\}/g) || []).sort().join(',');
+      assert.equal(ph(d[k]), ph(en[k]), `${code}.${k} yer tutucuları farklı`);
+    }
+  }
+  assert.equal(detectLang('tr-TR'), 'tr');
+  assert.equal(detectLang('pt-BR'), 'pt');
+  assert.equal(detectLang('de-DE'), 'en');
+  setLang('tr');
+  assert.equal(t('goal_score', { n: '1.000' }), '1.000 puana ulaş');
+  setLang('en');
+});
