@@ -53,7 +53,18 @@ function haptic(ms = 12) {
 // Ads have their own sound, so the music pauses while one is on screen.
 async function withAd(fn) {
   holdMusic(true);
-  try { return await fn(); } finally { holdMusic(false); }
+  try { return await fn(); } finally { holdMusic(false); adClock = 0; }
+}
+
+// Seconds of play since the last ad. Interstitials only appear at natural breaks
+// (level end, leaving a level, starting a level), never in the middle of a move:
+// AdMob forbids ads that interrupt gameplay.
+let adClock = 0;
+async function adBreak() {
+  if (adClock < AD_CONFIG.INTERSTITIAL_EVERY_SECONDS && (state.levelsSinceAd || 0) < AD_CONFIG.INTERSTITIAL_EVERY_N_LEVELS) return;
+  state.levelsSinceAd = 0;
+  save(state);
+  await withAd(showInterstitial);
 }
 
 // ---------- Screens ----------
@@ -120,6 +131,7 @@ function updateLivesUI() {
 setInterval(() => {
   updateLivesUI();
   if (currentScreen === 'game' && !document.hidden) trackPlayTime();
+  if (currentScreen !== 'home' && !document.hidden && $('#mock-ad').hidden) adClock++;
 }, 1000);
 
 async function noLivesFlow() {
@@ -276,6 +288,7 @@ async function startLevel(n) {
     buttons: [{ label: 'Start ✨', value: 'go', cls: 'btn-primary' }, { label: 'Back', value: 'back', cls: 'btn-ghost' }],
   });
   if (choice !== 'go') return false;
+  await adBreak();
 
   currentLevel = n;
   continuesUsed = 0;
@@ -481,6 +494,7 @@ async function failFlow() {
       { label: 'Kingdom Map', value: 'map', cls: 'btn-ghost' },
     ],
   });
+  await adBreak();
   if (choice !== 'retry' || !(await startLevel(currentLevel))) show('map');
 }
 
@@ -515,12 +529,8 @@ async function winFlow() {
     ],
   });
 
-  // Automatic interstitial ad every 5 levels
-  if (state.levelsSinceAd >= AD_CONFIG.INTERSTITIAL_EVERY_N_LEVELS) {
-    state.levelsSinceAd = 0;
-    save(state);
-    await withAd(showInterstitial);
-  }
+  // Interstitial every 90 seconds of play (or every 5 levels), at this natural break
+  await adBreak();
   if (choice !== 'next' || !(await startLevel(n + 1))) show('map');
 }
 
@@ -540,6 +550,7 @@ $('#btn-quit').addEventListener('click', async () => {
     save(state);
     engine = null;
     show('map');
+    await adBreak();
   }
 });
 
@@ -654,4 +665,4 @@ $('#screen-home').addEventListener('click', () => {
 });
 
 // For tests and debugging
-window.__game = { state, get engine() { return engine; }, renderer, startLevel };
+window.__game = { state, get engine() { return engine; }, renderer, startLevel, get adClock() { return adClock; }, set adClock(v) { adClock = v; } };
