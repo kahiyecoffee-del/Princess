@@ -1,0 +1,13 @@
+{
+  "appId": "com.gokyuzuprensesi.oyun",
+  "appName": "Gökyüzü Prensesi",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#1a0636"
+  },
+  "plugins": {
+    "AdMob": {
+      "appIdAndroid": "ca-app-pub-3940256099942544~3347511713"
+    }
+  }
+}

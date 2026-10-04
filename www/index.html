@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#2a0c4e">
+  <title>Gökyüzü Prensesi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="sky"></canvas>
+
+  <!-- Prenses karakteri (özgün çizim) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <linearGradient id="hairG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffb3e6"/><stop offset="1" stop-color="#c86bff"/>
+      </linearGradient>
+      <linearGradient id="crownG" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff6b0"/><stop offset="1" stop-color="#ffb300"/>
+      </linearGradient>
+      <radialGradient id="skinG" cx="0.45" cy="0.4" r="0.7">
+        <stop offset="0" stop-color="#fff1ea"/><stop offset="1" stop-color="#ffd2c2"/>
+      </radialGradient>
+    </defs>
+    <symbol id="princess" viewBox="0 0 200 220">
+      <path d="M30 120 C10 60 50 18 100 18 C150 18 190 60 170 120 C185 170 165 205 140 212 L60 212 C35 205 15 170 30 120Z" fill="url(#hairG)"/>
+      <path d="M58 170 Q100 200 142 170 L150 215 L50 215Z" fill="#7a3cff"/>
+      <path d="M70 175 Q100 192 130 175" stroke="#ffd34d" stroke-width="4" fill="none"/>
+      <ellipse cx="100" cy="110" rx="55" ry="60" fill="url(#skinG)"/>
+      <path d="M45 100 C50 55 80 45 100 60 C120 45 150 55 155 100 C140 80 120 72 100 82 C80 72 60 80 45 100Z" fill="url(#hairG)"/>
+      <path d="M62 38 L72 8 L86 30 L100 0 L114 30 L128 8 L138 38Z" fill="url(#crownG)" stroke="#fff" stroke-width="2"/>
+      <circle cx="100" cy="22" r="6" fill="#ff4f9a"/>
+      <circle cx="74" cy="28" r="4" fill="#4cc3ff"/>
+      <circle cx="126" cy="28" r="4" fill="#4cc3ff"/>
+      <ellipse cx="78" cy="112" rx="10" ry="13" fill="#3a1060"/>
+      <ellipse cx="122" cy="112" rx="10" ry="13" fill="#3a1060"/>
+      <circle cx="82" cy="107" r="4" fill="#fff"/>
+      <circle cx="126" cy="107" r="4" fill="#fff"/>
+      <circle cx="75" cy="117" r="2" fill="#fff"/>
+      <circle cx="119" cy="117" r="2" fill="#fff"/>
+      <ellipse cx="66" cy="132" rx="9" ry="5" fill="#ff8fbf" opacity="0.6"/>
+      <ellipse cx="134" cy="132" rx="9" ry="5" fill="#ff8fbf" opacity="0.6"/>
+      <path d="M90 138 Q100 147 110 138" stroke="#b3155c" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path d="M150 70 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4 l10 -4z" fill="#fff"/>
+    </symbol>
+  </svg>
+
+  <!-- ANA MENÜ -->
+  <section id="screen-home" class="screen">
+    <div class="top-bar">
+      <div class="lives-pill" data-lives>
+        <span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer">Dolu</span>
+      </div>
+      <button class="icon-btn" id="btn-sound" aria-label="Ses">🔊</button>
+    </div>
+    <div class="home-hero">
+      <svg class="princess-big" viewBox="0 0 200 220"><use href="#princess"/></svg>
+      <h1 class="logo"><span>Gökyüzü</span><span>Prensesi</span></h1>
+      <p class="tagline">Yıldızları eşleştir, gökyüzünü aydınlat ✨</p>
+    </div>
+    <div class="home-actions">
+      <button class="btn btn-primary btn-big" id="btn-play">Oyna · Seviye <span id="play-level">1</span></button>
+      <button class="btn btn-secondary" id="btn-map">🗺️ Seviye Haritası</button>
+      <button class="btn btn-recovery" id="btn-recovery">🌱 Kurtuluş Yolum <span class="badge" id="recovery-badge"></span></button>
+    </div>
+    <p class="footer-note">Bu oyunda gerçek para, bahis veya şans çarkı yoktur.</p>
+  </section>
+
+  <!-- SEVİYE HARİTASI -->
+  <section id="screen-map" class="screen" hidden>
+    <div class="top-bar">
+      <button class="icon-btn" data-back aria-label="Geri">←</button>
+      <h2>Seviye Haritası</h2>
+      <div class="lives-pill" data-lives><span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer"></span></div>
+    </div>
+    <div class="level-grid" id="level-grid"></div>
+  </section>
+
+  <!-- OYUN -->
+  <section id="screen-game" class="screen" hidden>
+    <div class="hud">
+      <button class="icon-btn" id="btn-quit" aria-label="Çık">✕</button>
+      <div class="hud-level">Seviye <b id="hud-level">1</b></div>
+      <div class="hud-moves"><b id="hud-moves">25</b><small>hamle</small></div>
+    </div>
+    <div class="hud2">
+      <svg class="princess-small" id="princess-small" viewBox="0 0 200 220"><use href="#princess"/></svg>
+      <div class="hud-score">
+        <div class="score-line"><span id="hud-score">0</span><span class="goals" id="hud-goals"></span></div>
+        <div class="progress"><div class="progress-fill" id="hud-progress"></div>
+          <span class="pstar" data-star="1">★</span><span class="pstar" data-star="2">★</span><span class="pstar" data-star="3">★</span>
+        </div>
+      </div>
+    </div>
+    <div class="board-wrap"><canvas id="board"></canvas></div>
+  </section>
+
+  <!-- KURTULUŞ YOLUM -->
+  <section id="screen-recovery" class="screen" hidden>
+    <div class="top-bar">
+      <button class="icon-btn" data-back aria-label="Geri">←</button>
+      <h2>Kurtuluş Yolum</h2>
+      <span></span>
+    </div>
+    <div class="recovery-body">
+      <div class="card counter-card">
+        <div class="counter-days"><b id="rec-days">0</b><span>gündür bahis yok</span></div>
+        <div class="counter-money"><b id="rec-money">0 ₺</b><span>cebinde kaldı</span></div>
+      </div>
+      <div class="card message-card" id="rec-message"></div>
+      <button class="btn btn-urge" id="btn-urge">🌊 Dürtü geldi, yardım et</button>
+      <div class="card">
+        <h3>Rozetlerim</h3>
+        <div class="milestones" id="rec-milestones"></div>
+        <p class="small">Atlatılan dürtü: <b id="rec-urges">0</b></p>
+      </div>
+      <div class="card">
+        <h3>Ayarlar</h3>
+        <label>Bahsi bıraktığım gün <input type="date" id="rec-date"></label>
+        <label>Eskiden günde ortalama harcadığım (₺) <input type="number" min="0" step="10" id="rec-spend" inputmode="numeric"></label>
+        <div class="row">
+          <button class="btn btn-secondary" id="rec-save">Kaydet</button>
+          <button class="btn btn-ghost" id="rec-reset">Kayma yaşadım, sayacı sıfırla</button>
+        </div>
+      </div>
+      <div class="card help-card">
+        <h3>Yalnız değilsin</h3>
+        <div id="rec-helplines"></div>
+        <p class="small">Bu uygulama bir destek aracıdır; profesyonel tedavinin yerini tutmaz.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- GENEL MODAL -->
+  <div class="modal-backdrop" id="modal" hidden>
+    <div class="modal">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-body" id="modal-body"></div>
+      <div class="modal-buttons" id="modal-buttons"></div>
+    </div>
+  </div>
+
+  <!-- Tarayıcıda test için sahte reklam -->
+  <div class="mock-ad" id="mock-ad" hidden>
+    <div class="mock-ad-kind"></div>
+    <div class="mock-ad-box">REKLAM ALANI<br><small>Android'de burada AdMob reklamı gösterilir</small></div>
+    <div class="mock-ad-timer">3</div>
+    <button class="btn btn-secondary mock-ad-close" hidden>Kapat ✕</button>
+  </div>
+
+  <script src="js/main.js" type="module"></script>
+</body>
+</html>

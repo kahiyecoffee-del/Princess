@@ -1,0 +1,103 @@
+# Gökyüzü Prensesi ✨
+
+Kumar bağımlılığıyla mücadele eden kişilere **parasız, risksiz ve sakinleştirici** bir alternatif sunmayı hedefleyen,
+reklam gelirli bir 3'lü eşleştirme (match-3) oyunu. Android / Google Play için Capacitor ile paketlenir.
+
+## Özellikler
+
+| Özellik | Ayrıntı |
+|---|---|
+| Oyun | 8×8 tahta, 4–6 renk, kayma/dokunma ile takas, zincirleme düşüşler (cascade) |
+| Özel taşlar | 4'lü → satır/sütun ışını, L/T → yıldız bombası (3×3), 5'li → gökkuşağı küresi (bir rengin tamamı) |
+| Seviyeler | 200 seviye: puan, taş toplama ve kristal buz kırma hedefleri. Her 10 seviyenin son ikisi "zor seviye" |
+| Zorluk | Seviye arttıkça daha az hamle, daha çok renk, daha yüksek hedef, tahtada boşluklar, çift katlı buz |
+| Can | En fazla **5 can**, her can **30 dakikada** yenilenir. Seviye kaybedilince veya yarıda bırakılınca 1 can gider |
+| Reklamlar | **Her 5 seviyede bir** otomatik geçiş reklamı; hamle bitince **reklam izle → +3 hamle** (deneme başına en fazla 2 kez); can bitince reklam izle → +1 can |
+| Kurtuluş Yolum | Bahissiz gün sayacı, biriken para, rozetler, günlük motivasyon mesajı, "Dürtü geldi" nefes egzersizi, YEDAM 115 yardım hattı |
+| Sağlıklı oyun | 30 dakikalık kesintisiz oyunda mola hatırlatması. Şans çarkı, ganimet kutusu, gerçek para yok |
+
+## Proje yapısı
+
+```
+www/                  Oyunun kendisi (Capacitor'ın webDir'i)
+  index.html          Ekranlar, prenses SVG karakteri
+  css/style.css
+  js/board.js         Tahta mantığı: eşleşme, özel taşlar, yerçekimi, karıştırma
+  js/engine.js        Seviye durumu: puan, hamle, hedefler
+  js/levels.js        Seviye üretici ve zorluk eğrisi
+  js/render.js        Canvas çizimi, animasyonlar, parçacık efektleri, dokunma girişi
+  js/lives.js         Can sistemi (5 can / 30 dk)
+  js/ads.js           AdMob entegrasyonu (+ tarayıcı için sahte reklam)
+  js/recovery.js      Kurtuluş araçları ve yardım hatları
+  js/main.js          Oyun akışı, menüler, modallar
+test/                 Birim testleri (node --test)
+tools/simulate.mjs    Zorluk dengesini ölçen yapay oyuncu
+```
+
+## Tarayıcıda deneme
+
+```bash
+npm start            # http://localhost:8080
+npm test             # birim testleri
+npm run simulate     # seviyelerin yapay oyuncuya göre kazanma oranları
+```
+
+Tarayıcıda reklamlar yerine 3 saniyelik sahte bir "REKLAM ALANI" ekranı çıkar.
+
+## Android'e paketleme
+
+Gerekenler: Node 18+, Android Studio (JDK 17 ile birlikte gelir).
+
+```bash
+npm install
+npx cap add android
+npx cap sync android
+```
+
+Sonra `android/app/src/main/AndroidManifest.xml` dosyasında `<application>` etiketinin içine AdMob uygulama kimliğini ekleyin
+(eklenmezse uygulama açılışta çöker):
+
+```xml
+<meta-data
+    android:name="com.google.android.gms.ads.APPLICATION_ID"
+    android:value="ca-app-pub-3940256099942544~3347511713"/>
+```
+
+`npx cap open android` ile Android Studio'yu açıp önce emülatörde/telefonda çalıştırın.
+Yayın için: **Build → Generate Signed Bundle / APK → Android App Bundle (.aab)**. Anahtar dosyanızı (`.jks`) güvenli
+bir yerde saklayın; kaybederseniz uygulamayı güncelleyemezsiniz.
+
+## Yayına çıkmadan önce yapılacaklar
+
+1. **AdMob hesabı** açın (admob.google.com), uygulamayı ekleyin, bir *Geçiş (Interstitial)* ve bir *Ödüllü (Rewarded)* reklam birimi oluşturun.
+2. `www/js/ads.js` içindeki `INTERSTITIAL_ID` ve `REWARDED_ID` değerlerini kendi kimliklerinizle değiştirin, `TESTING: false` yapın.
+3. Uygulama kimliğini (`~` içeren) hem `AndroidManifest.xml` hem `capacitor.config.json` içinde güncelleyin.
+4. `capacitor.config.json` içindeki `appId` (`com.gokyuzuprensesi.oyun`) değerini size ait bir paket adıyla değiştirin; yayından sonra değiştirilemez.
+5. AdMob'da **GDPR onay mesajını** (Privacy & messaging) oluşturun; kod, AB kullanıcılarına formu otomatik gösterir.
+6. **Gizlilik politikası** sayfası hazırlayın (AdMob kullanıldığı için Play Console zorunlu tutar).
+
+> ⚠️ Kendi reklamlarınıza asla tıklamayın. Geliştirirken test kimliklerini kullanın; aksi halde AdMob hesabı kapatılabilir.
+
+### Google Play Console formları
+
+- **Reklam içeriyor mu?** → Evet.
+- **İçerik derecelendirmesi**: "Simüle kumar" sorusuna **Hayır** (oyunda bahis, şans çarkı, slot mekaniği yok).
+- **Hedef kitle**: 13 yaş ve üzeri seçin. Çocuklara yönelik (Families) seçilirse çok daha sıkı reklam kuralları uygulanır.
+- **Veri güvenliği**: AdMob reklam kimliği ve cihaz bilgisi topladığı için "Cihaz veya diğer kimlikler" beyan edilmeli.
+- **Sağlık iddiaları**: Mağaza açıklamasında "tedavi eder" gibi ifadeler kullanmayın; "destek olur", "dikkat dağıtmaya yardımcı olur"
+  gibi ifadeler kullanın. Uygulama içinde profesyonel desteğe (YEDAM 115) yönlendirme zaten mevcut.
+- **Telif / marka**: Başka oyunların adını, karakterlerini veya görsellerini (ör. "Starlight Princess") kullanmayın. Bu
+  projedeki tüm görseller kodla çizilmiş özgün tasarımlardır.
+
+## Ayarlanabilir değerler
+
+| Değer | Dosya | Varsayılan |
+|---|---|---|
+| Maksimum can / yenilenme süresi | `js/lives.js` → `MAX_LIVES`, `REGEN_MS` | 5 / 30 dk |
+| Kaç seviyede bir geçiş reklamı | `js/ads.js` → `INTERSTITIAL_EVERY_N_LEVELS` | 5 |
+| Reklamla kazanılan hamle / hak sayısı | `js/main.js` → `CONTINUE_MOVES`, `MAX_CONTINUES` | 3 / 2 |
+| Mola hatırlatması | `js/main.js` → `BREAK_REMINDER_SECONDS` | 30 dk |
+| Zorluk eğrisi | `js/levels.js` → `difficulty`, hamle formülleri | — |
+| Oyun adı | `index.html`, `capacitor.config.json` | Gökyüzü Prensesi |
+
+Zorluğu değiştirdikten sonra `npm run simulate` ile kazanma oranlarını kontrol edin.
