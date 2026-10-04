@@ -14,32 +14,21 @@
   <div class="backdrop" aria-hidden="true"></div>
   <canvas id="sky"></canvas>
 
-  <!-- HOME -->
-  <section id="screen-home" class="screen">
-    <div class="top-bar">
-      <div class="lives-pill" data-lives>
-        <span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer">Full</span>
-      </div>
-      <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
-    </div>
+  <!-- WELCOME: only the princess greets the player; a tap opens the map -->
+  <section id="screen-home" class="screen welcome">
     <div class="home-hero">
       <div class="princess-home" id="princess-home"></div>
       <h1 class="logo"><span class="logo-small">The</span><span>Sky Princess</span></h1>
-      <p class="tagline">Match the stars, light up the kingdom</p>
+      <p class="tap-hint">Tap to begin</p>
     </div>
-    <div class="home-actions">
-      <button class="btn btn-primary btn-big" id="btn-play">Play · Level <span id="play-level">1</span></button>
-      <button class="btn btn-secondary" id="btn-map">Kingdom Map</button>
-    </div>
-    <p class="footer-note">No real money, no betting, no spinning wheels. Just calm fun.</p>
   </section>
 
   <!-- KINGDOM MAP -->
   <section id="screen-map" class="screen" hidden>
     <div class="top-bar">
-      <button class="icon-btn" data-back aria-label="Back">←</button>
-      <h2>Kingdom Map</h2>
       <div class="lives-pill" data-lives><span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer"></span></div>
+      <h2>Kingdom Map</h2>
+      <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
     </div>
     <div class="map-scroll" id="map-scroll">
       <div class="map-path" id="level-grid"></div>

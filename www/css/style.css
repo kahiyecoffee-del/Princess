@@ -467,3 +467,15 @@ input, select {
   100% { opacity: 0; transform: translate(calc(80px + var(--dx)), 70px) scale(0.9) rotate(var(--rot)); }
 }
 @media (prefers-reduced-motion: reduce) { .pr-aura, .pr-orbit, .pr-orbit i { animation: none; } }
+
+/* ---------- Welcome screen ---------- */
+.welcome { cursor: pointer; }
+.welcome .home-hero { gap: 6px; }
+.welcome .princess-home { width: min(78vw, 360px, 52vh); }
+.tap-hint {
+  margin: 18px 0 0; font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: 0.3em;
+  text-transform: uppercase; color: var(--gold-light); animation: tapPulse 2.2s ease-in-out infinite;
+}
+@keyframes tapPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; text-shadow: 0 0 12px rgba(232, 182, 74, 0.8); } }
+.welcome.leaving .home-hero { animation: welcomeOut 0.95s ease-in forwards; }
+@keyframes welcomeOut { 45% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1.12); opacity: 0; } }

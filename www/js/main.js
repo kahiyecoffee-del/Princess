@@ -30,7 +30,7 @@ let nextBreakAt = BREAK_REMINDER_SECONDS;
 
 const renderer = new Renderer($('#board'), { onSwap: handleSwap, onSound: (n, k) => sfx(n, k), onHint: princessHint });
 const tapLine = () => say(Math.random() < 0.6 ? 'tickles' : pick(['giggle1', 'giggle2', 'giggle3']));
-const homePrincess = new Princess($('#princess-home'), { onTap: tapLine, onGiggle: giggle });
+const homePrincess = new Princess($('#princess-home'), { onGiggle: giggle });
 const stagePrincess = new Princess($('#princess-stage'), { onTap: tapLine, onGiggle: giggle, framed: false });
 
 // When the player seems stuck, the princess leans toward the board and whispers a hint.
@@ -67,11 +67,9 @@ function show(name) {
   }
   currentScreen = name;
   setTrack(name === 'game' ? 'game' : 'menu');
-  if (name === 'home') renderHome();
   if (name === 'map') renderMap();
   if (name === 'game') requestAnimationFrame(() => renderer.resize());
 }
-document.querySelectorAll('[data-back]').forEach((b) => b.addEventListener('click', () => show('home')));
 
 // ---------- Modal ----------
 function modal({ title, body = '', buttons = [] }) {
@@ -155,13 +153,6 @@ async function noLivesFlow() {
 }
 
 // ---------- Home ----------
-function renderHome() {
-  $('#play-level').textContent = Math.min(state.maxLevel, LEVEL_COUNT);
-  updateLivesUI();
-}
-
-$('#btn-play').addEventListener('click', () => startLevel(Math.min(state.maxLevel, LEVEL_COUNT)));
-$('#btn-map').addEventListener('click', () => show('map'));
 // ---------- Settings ----------
 const SETTINGS = [
   ['music', 'Music', (v) => setMusicEnabled(v)],
@@ -487,10 +478,10 @@ async function failFlow() {
     body: `<p>You lost a life. Lives left: <b>${lives}</b> ❤</p><p class="small">Every try makes you better. You can do this!</p>`,
     buttons: [
       { label: 'Try again', value: 'retry', cls: 'btn-primary' },
-      { label: 'Home', value: 'home', cls: 'btn-ghost' },
+      { label: 'Kingdom Map', value: 'map', cls: 'btn-ghost' },
     ],
   });
-  if (choice !== 'retry' || !(await startLevel(currentLevel))) show('home');
+  if (choice !== 'retry' || !(await startLevel(currentLevel))) show('map');
 }
 
 async function winFlow() {
@@ -520,7 +511,7 @@ async function winFlow() {
     body: `<img class="modal-portrait breathe" src="img/prenses-yuz.jpg" alt=""><div class="big-stars">${starsHtml}</div><p>Score: <b>${engine.score.toLocaleString('en-US')}</b>${bonus ? `<br><small>Moves-left bonus: +${bonus.toLocaleString('en-US')}</small>` : ''}</p>`,
     buttons: [
       ...(n < LEVEL_COUNT ? [{ label: 'Next level ➜', value: 'next', cls: 'btn-primary' }] : []),
-      { label: 'Home', value: 'home', cls: 'btn-ghost' },
+      { label: 'Kingdom Map', value: 'map', cls: 'btn-ghost' },
     ],
   });
 
@@ -530,12 +521,12 @@ async function winFlow() {
     save(state);
     await withAd(showInterstitial);
   }
-  if (choice !== 'next' || !(await startLevel(n + 1))) show('home');
+  if (choice !== 'next' || !(await startLevel(n + 1))) show('map');
 }
 
 $('#btn-quit').addEventListener('click', async () => {
   if (renderer.busy) return;
-  if (!engine || engine.movesUsed === 0) { show('home'); return; }
+  if (!engine || engine.movesUsed === 0) { show('map'); return; }
   const choice = await modal({
     title: 'Leave this level?',
     body: '<p>If you leave now, you lose <b>1 life</b>.</p>',
@@ -548,7 +539,7 @@ $('#btn-quit').addEventListener('click', async () => {
     loseLife(state.lives, Date.now());
     save(state);
     engine = null;
-    show('home');
+    show('map');
   }
 });
 
@@ -642,7 +633,6 @@ const AppPlugin = Capacitor.isNativePlatform() ? registerPlugin('App') : null;
 AppPlugin?.addListener('backButton', () => {
   if (!$('#modal').hidden || !$('#mock-ad').hidden) return;
   if (currentScreen === 'game') $('#btn-quit').click();
-  else if (currentScreen !== 'home') show('home');
   else AppPlugin.minimizeApp();
 });
 
@@ -651,7 +641,17 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) save(
 show('home');
 initAds();
 // Greet the player on the first tap (browsers only allow sound after a tap)
-whenUnlocked(() => { if (currentScreen === 'home') { say(state.maxLevel > 1 ? 'welcome' : 'hi'); homePrincess.react('cheer'); } });
+whenUnlocked(() => { if (currentScreen === 'home') say(state.maxLevel > 1 ? 'welcome' : 'hi'); });
+
+// Welcome screen: one tap anywhere and the princess winks, then the map opens.
+let leavingWelcome = false;
+$('#screen-home').addEventListener('click', () => {
+  if (leavingWelcome) return;
+  leavingWelcome = true;
+  homePrincess.react('cheer');
+  $('#screen-home').classList.add('leaving');
+  setTimeout(() => { show('map'); leavingWelcome = false; $('#screen-home').classList.remove('leaving'); }, 950);
+});
 
 // For tests and debugging
 window.__game = { state, get engine() { return engine; }, renderer, startLevel };
