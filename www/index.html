@@ -1,105 +1,123 @@
 <!doctype html>
-<html lang="tr">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#2a0c4e">
-  <title>Gökyüzü Prensesi</title>
+  <meta name="theme-color" content="#0b0f2e">
+  <title>Sky Princess</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="img/prenses.jpg">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div class="backdrop" aria-hidden="true"></div>
   <canvas id="sky"></canvas>
 
-  <!-- ANA MENÜ -->
+  <!-- HOME -->
   <section id="screen-home" class="screen">
     <div class="top-bar">
       <div class="lives-pill" data-lives>
-        <span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer">Dolu</span>
+        <span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer">Full</span>
       </div>
-      <button class="icon-btn" id="btn-sound" aria-label="Ses">🔊</button>
+      <button class="icon-btn" id="btn-sound" aria-label="Sound">🔊</button>
     </div>
     <div class="home-hero">
-      <div class="portrait"><img src="img/prenses.jpg" alt="Gökyüzü Prensesi" width="900" height="900"></div>
-      <h1 class="logo"><span>Gökyüzü</span><span>Prensesi</span></h1>
-      <p class="tagline">Yıldızları eşleştir, gökyüzünü aydınlat ✨</p>
+      <div class="portrait breathe"><img src="img/prenses.jpg" alt="The Sky Princess" width="900" height="900"></div>
+      <h1 class="logo"><span class="logo-small">The</span><span>Sky Princess</span></h1>
+      <p class="tagline">Match the stars, light up the kingdom</p>
     </div>
     <div class="home-actions">
-      <button class="btn btn-primary btn-big" id="btn-play">Oyna · Seviye <span id="play-level">1</span></button>
-      <button class="btn btn-secondary" id="btn-map">🗺️ Seviye Haritası</button>
-      <button class="btn btn-recovery" id="btn-recovery">🌱 Kurtuluş Yolum <span class="badge" id="recovery-badge"></span></button>
+      <button class="btn btn-primary btn-big" id="btn-play">Play · Level <span id="play-level">1</span></button>
+      <div class="row-2">
+        <button class="btn btn-secondary" id="btn-map">Kingdom Map</button>
+        <button class="btn btn-recovery" id="btn-recovery">My Journey <span class="badge" id="recovery-badge"></span></button>
+      </div>
     </div>
-    <p class="footer-note">Bu oyunda gerçek para, bahis veya şans çarkı yoktur.</p>
+    <p class="footer-note">No real money, no betting, no spinning wheels. Just calm fun.</p>
   </section>
 
-  <!-- SEVİYE HARİTASI -->
+  <!-- KINGDOM MAP -->
   <section id="screen-map" class="screen" hidden>
     <div class="top-bar">
-      <button class="icon-btn" data-back aria-label="Geri">←</button>
-      <h2>Seviye Haritası</h2>
+      <button class="icon-btn" data-back aria-label="Back">←</button>
+      <h2>Kingdom Map</h2>
       <div class="lives-pill" data-lives><span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer"></span></div>
     </div>
-    <div class="level-grid" id="level-grid"></div>
+    <div class="map-scroll" id="map-scroll">
+      <div class="map-path" id="level-grid"></div>
+    </div>
   </section>
 
-  <!-- OYUN -->
+  <!-- GAME -->
   <section id="screen-game" class="screen" hidden>
     <div class="hud">
-      <button class="icon-btn" id="btn-quit" aria-label="Çık">✕</button>
-      <div class="hud-level">Seviye <b id="hud-level">1</b></div>
-      <div class="hud-moves"><b id="hud-moves">25</b><small>hamle</small></div>
+      <button class="icon-btn" id="btn-quit" aria-label="Leave level">✕</button>
+      <div class="hud-level">Level <b id="hud-level">1</b></div>
+      <div class="hud-moves"><b id="hud-moves">25</b><small>moves</small></div>
     </div>
-    <div class="hud2">
-      <img class="princess-small" id="princess-small" src="img/prenses-yuz.jpg" alt="" width="256" height="256">
-      <div class="hud-score">
-        <div class="score-line"><span id="hud-score">0</span><span class="goals" id="hud-goals"></span></div>
-        <div class="progress"><div class="progress-fill" id="hud-progress"></div>
-          <span class="pstar" data-star="1">★</span><span class="pstar" data-star="2">★</span><span class="pstar" data-star="3">★</span>
+    <div class="stage">
+      <div class="stage-portrait breathe" id="princess-small">
+        <img src="img/prenses.jpg" alt="" width="900" height="900">
+      </div>
+      <div class="stage-side">
+        <div class="speech" id="speech" hidden><span id="speech-text">Amazing!</span></div>
+        <div class="hud-score">
+          <div class="score-line"><span id="hud-score">0</span><span class="goals" id="hud-goals"></span></div>
+          <div class="progress"><div class="progress-fill" id="hud-progress"></div>
+            <span class="pstar" data-star="1">★</span><span class="pstar" data-star="2">★</span><span class="pstar" data-star="3">★</span>
+          </div>
         </div>
       </div>
     </div>
     <div class="board-wrap"><canvas id="board"></canvas></div>
   </section>
 
-  <!-- KURTULUŞ YOLUM -->
+  <!-- MY JOURNEY (recovery) -->
   <section id="screen-recovery" class="screen" hidden>
     <div class="top-bar">
-      <button class="icon-btn" data-back aria-label="Geri">←</button>
-      <h2>Kurtuluş Yolum</h2>
+      <button class="icon-btn" data-back aria-label="Back">←</button>
+      <h2>My Journey</h2>
       <span></span>
     </div>
     <div class="recovery-body">
       <div class="card counter-card">
-        <div class="counter-days"><b id="rec-days">0</b><span>gündür bahis yok</span></div>
-        <div class="counter-money"><b id="rec-money">0 ₺</b><span>cebinde kaldı</span></div>
+        <div class="counter-days"><b id="rec-days">0</b><span>days bet-free</span></div>
+        <div class="counter-money"><b id="rec-money">0</b><span>kept in your pocket</span></div>
       </div>
       <div class="card message-card" id="rec-message"></div>
-      <button class="btn btn-urge" id="btn-urge">🌊 Dürtü geldi, yardım et</button>
+      <button class="btn btn-urge" id="btn-urge">I feel an urge. Help me.</button>
       <div class="card">
-        <h3>Rozetlerim</h3>
+        <h3>My badges</h3>
         <div class="milestones" id="rec-milestones"></div>
-        <p class="small">Atlatılan dürtü: <b id="rec-urges">0</b></p>
+        <p class="small">Urges overcome: <b id="rec-urges">0</b></p>
       </div>
       <div class="card">
-        <h3>Ayarlar</h3>
-        <label>Bahsi bıraktığım gün <input type="date" id="rec-date"></label>
-        <label>Eskiden günde ortalama harcadığım (₺) <input type="number" min="0" step="10" id="rec-spend" inputmode="numeric"></label>
+        <h3>Settings</h3>
+        <label for="rec-date">The day I stopped betting <input type="date" id="rec-date"></label>
+        <label for="rec-spend">What I used to spend per day <input type="number" min="0" step="10" id="rec-spend" inputmode="numeric"></label>
+        <label for="rec-currency">Currency
+          <select id="rec-currency">
+            <option value="USD">US Dollar ($)</option>
+            <option value="EUR">Euro (€)</option>
+            <option value="GBP">British Pound (£)</option>
+            <option value="TRY">Turkish Lira (₺)</option>
+          </select>
+        </label>
         <div class="row">
-          <button class="btn btn-secondary" id="rec-save">Kaydet</button>
-          <button class="btn btn-ghost" id="rec-reset">Kayma yaşadım, sayacı sıfırla</button>
+          <button class="btn btn-secondary" id="rec-save">Save</button>
+          <button class="btn btn-ghost" id="rec-reset">I slipped. Restart my counter.</button>
         </div>
       </div>
       <div class="card help-card">
-        <h3>Yalnız değilsin</h3>
+        <h3>You are not alone</h3>
         <div id="rec-helplines"></div>
-        <p class="small">Bu uygulama bir destek aracıdır; profesyonel tedavinin yerini tutmaz.</p>
+        <p class="small">This app is a support tool. It does not replace professional treatment.</p>
       </div>
     </div>
   </section>
 
-  <!-- GENEL MODAL -->
+  <!-- MODAL -->
   <div class="modal-backdrop" id="modal" hidden>
     <div class="modal">
       <div class="modal-title" id="modal-title"></div>
@@ -108,12 +126,12 @@
     </div>
   </div>
 
-  <!-- Tarayıcıda test için sahte reklam -->
+  <!-- Placeholder ad for browser testing -->
   <div class="mock-ad" id="mock-ad" hidden>
     <div class="mock-ad-kind"></div>
-    <div class="mock-ad-box">REKLAM ALANI<br><small>Android'de burada AdMob reklamı gösterilir</small></div>
+    <div class="mock-ad-box">AD SPACE<br><small>On Android, an AdMob ad appears here</small></div>
     <div class="mock-ad-timer">3</div>
-    <button class="btn btn-secondary mock-ad-close" hidden>Kapat ✕</button>
+    <button class="btn btn-secondary mock-ad-close" hidden>Close ✕</button>
   </div>
 
   <script src="js/main.js" type="module"></script>

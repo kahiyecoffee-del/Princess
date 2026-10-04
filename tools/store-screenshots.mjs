@@ -21,6 +21,7 @@ const swipe = async () => {
 };
 await swipe(); await page.waitForTimeout(1500);
 await swipe(); await page.waitForTimeout(260);
+await page.evaluate(() => { document.querySelector('#speech-text').textContent = 'Amazing!'; document.querySelector('#speech').hidden = false; });
 await page.screenshot({ path: `${out}ekran-2-oyun.png` });
 await page.waitForTimeout(1500);
 await page.goto('http://localhost:8080/');

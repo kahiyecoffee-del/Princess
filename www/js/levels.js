@@ -94,7 +94,7 @@ export function getLevel(n) {
 }
 
 export function describeGoal(level) {
-  if (level.kind === 'score') return `${level.targetScore.toLocaleString('tr-TR')} puana ulaş`;
-  if (level.kind === 'collect') return 'Gösterilen taşları topla';
-  return 'Tüm kristal buzları kır';
+  if (level.kind === 'score') return `Reach ${level.targetScore.toLocaleString('en-US')} points`;
+  if (level.kind === 'collect') return 'Collect the jewels shown below';
+  return 'Break all the crystal ice';
 }

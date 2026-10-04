@@ -1,16 +1,17 @@
-// Tuval (canvas) çizimi, animasyonlar, parçacık efektleri ve dokunma girişi.
+// Canvas drawing, animations, particle effects and touch input.
 import { SP } from './board.js';
 
+// Royal jewel set: faceted gemstones in gold settings.
 export const TILE_COLORS = [
-  { name: 'Kalp', main: '#ff4f9a', light: '#ffc2dc', dark: '#b3155c' },
-  { name: 'Yıldız', main: '#ffcc33', light: '#fff4b8', dark: '#c27c00' },
-  { name: 'Hilal', main: '#4cc3ff', light: '#c9efff', dark: '#1170b8' },
-  { name: 'Elmas', main: '#b067ff', light: '#e6ccff', dark: '#6a1fc4' },
-  { name: 'Gezegen', main: '#3fe0a0', light: '#c8ffe8', dark: '#108a5c' },
-  { name: 'Taç', main: '#ff8a4c', light: '#ffd8c2', dark: '#c24a10' },
+  { name: 'Ruby', main: '#e8325a', light: '#ffb3c4', dark: '#6e0822' },
+  { name: 'Topaz', main: '#ffd04d', light: '#fffbe0', dark: '#c27f08' },
+  { name: 'Sapphire', main: '#3577ff', light: '#c2d8ff', dark: '#0a2280' },
+  { name: 'Amethyst', main: '#a05cff', light: '#e6d0ff', dark: '#45168f' },
+  { name: 'Emerald', main: '#1fc488', light: '#bff7df', dark: '#045a39' },
+  { name: 'Moonstone', main: '#c9d4ff', light: '#ffffff', dark: '#5a67a8' },
 ];
 
-const COMBO_WORDS = ['', '', 'Güzel!', 'Harika!', 'Muhteşem!', 'Yıldız Yağmuru!', 'Gökyüzü Büyüsü!', 'Efsanevi!'];
+const COMBO_WORDS = ['', '', 'Great!', 'Amazing!', 'Fantastic!', 'Spectacular!', 'Magnificent!', 'Legendary!'];
 
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
@@ -23,14 +24,7 @@ const easeOutBounce = (t) => {
   return n1 * (t -= 2.625 / d1) * t + 0.984375;
 };
 
-// --- Şekil çizimleri (birim koordinatlarda, merkez 0,0, yarıçap ~1) ---
-function pathHeart(ctx) {
-  ctx.beginPath();
-  ctx.moveTo(0, 0.85);
-  ctx.bezierCurveTo(-1.15, 0.05, -0.85, -1.0, 0, -0.45);
-  ctx.bezierCurveTo(0.85, -1.0, 1.15, 0.05, 0, 0.85);
-  ctx.closePath();
-}
+// --- Shapes (unit coordinates, centre 0,0, radius ~1) ---
 function pathStar(ctx, points = 5, inner = 0.45) {
   ctx.beginPath();
   for (let i = 0; i < points * 2; i++) {
@@ -40,97 +34,184 @@ function pathStar(ctx, points = 5, inner = 0.45) {
   }
   ctx.closePath();
 }
-function pathMoon(ctx) {
+
+const poly = (n, r, rot = -Math.PI / 2, sx = 1, sy = 1) =>
+  Array.from({ length: n }, (_, i) => [Math.cos(rot + (i * 2 * Math.PI) / n) * r * sx, Math.sin(rot + (i * 2 * Math.PI) / n) * r * sy]);
+
+// Polygon outlines for the faceted cuts
+const CUTS = {
+  1: Array.from({ length: 10 }, (_, i) => {
+    const r = i % 2 ? 0.46 : 0.98;
+    const a = (Math.PI * i) / 5 - Math.PI / 2;
+    return [Math.cos(a) * r, Math.sin(a) * r + 0.07];
+  }),
+  2: [[0, -0.98], [0.56, -0.42], [0.62, 0.12], [0, 0.98], [-0.62, 0.12], [-0.56, -0.42]],
+  3: poly(6, 0.9),
+  4: [[-0.42, -0.88], [0.42, -0.88], [0.7, -0.6], [0.7, 0.6], [0.42, 0.88], [-0.42, 0.88], [-0.7, 0.6], [-0.7, -0.6]],
+};
+
+const LIGHT = [-0.55, -0.83]; // light comes from the top left
+
+function goldRim(ctx, width = 0.11) {
+  const g = ctx.createLinearGradient(0, -1, 0, 1);
+  g.addColorStop(0, '#fff3c4');
+  g.addColorStop(0.35, '#e8b64a');
+  g.addColorStop(0.7, '#a8741c');
+  g.addColorStop(1, '#f2cf73');
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = width + 0.06;
+  ctx.strokeStyle = 'rgba(40, 20, 0, 0.55)';
+  ctx.stroke();
+  ctx.lineWidth = width;
+  ctx.strokeStyle = g;
+  ctx.stroke();
+}
+
+function facetedPolygon(ctx, pts, col, table = 0.48) {
+  const n = pts.length;
+  const cx = -0.05; const cy = -0.07; // table slightly offset toward the light
+  const inner = pts.map(([x, y]) => [cx + x * table, cy + y * table]);
+  const trace = (p) => { ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); };
+
+  // Base colour
+  trace(pts);
+  const base = ctx.createLinearGradient(-0.8, -0.9, 0.7, 0.9);
+  base.addColorStop(0, col.light);
+  base.addColorStop(0.35, col.main);
+  base.addColorStop(1, col.dark);
+  ctx.fillStyle = base;
+  ctx.fill();
+
+  // Crown facets: each edge shaded by how much it faces the light
+  for (let i = 0; i < n; i++) {
+    const a = pts[i]; const b = pts[(i + 1) % n];
+    const mx = (a[0] + b[0]) / 2; const my = (a[1] + b[1]) / 2;
+    const len = Math.hypot(mx, my) || 1;
+    const dot = (mx / len) * LIGHT[0] + (my / len) * LIGHT[1];
+    ctx.beginPath();
+    ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]);
+    ctx.lineTo(inner[(i + 1) % n][0], inner[(i + 1) % n][1]); ctx.lineTo(inner[i][0], inner[i][1]);
+    ctx.closePath();
+    ctx.fillStyle = dot > 0 ? `rgba(255,255,255,${0.12 + dot * 0.38})` : `rgba(0,0,30,${0.08 - dot * 0.32})`;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.lineWidth = 0.02;
+    ctx.stroke();
+  }
+
+  // Table (flat top face)
+  trace(inner);
+  const t = ctx.createLinearGradient(-0.4, -0.5, 0.4, 0.5);
+  t.addColorStop(0, col.light);
+  t.addColorStop(0.6, col.main);
+  t.addColorStop(1, col.dark);
+  ctx.fillStyle = t;
+  ctx.globalAlpha = 0.85;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 0.025;
+  ctx.stroke();
+
+  trace(pts);
+  goldRim(ctx);
+}
+
+function heartPath(ctx, s = 1, dy = 0) {
   ctx.beginPath();
-  ctx.arc(0, 0, 0.9, Math.PI * 0.32, Math.PI * 1.68, false);
-  ctx.arc(0.42, -0.1, 0.72, Math.PI * 1.45, Math.PI * 0.62, true);
+  ctx.moveTo(0, 0.9 * s + dy);
+  ctx.bezierCurveTo(-1.2 * s, 0.05 * s + dy, -0.9 * s, -1.02 * s + dy, 0, -0.42 * s + dy);
+  ctx.bezierCurveTo(0.9 * s, -1.02 * s + dy, 1.2 * s, 0.05 * s + dy, 0, 0.9 * s + dy);
   ctx.closePath();
 }
-function pathDiamond(ctx) {
-  ctx.beginPath();
-  ctx.moveTo(-0.85, -0.3);
-  ctx.lineTo(-0.45, -0.8);
-  ctx.lineTo(0.45, -0.8);
-  ctx.lineTo(0.85, -0.3);
-  ctx.lineTo(0, 0.9);
-  ctx.closePath();
+
+function drawRuby(ctx, col) {
+  heartPath(ctx);
+  const g = ctx.createRadialGradient(-0.35, -0.4, 0.05, 0, 0.1, 1.15);
+  g.addColorStop(0, col.light);
+  g.addColorStop(0.4, col.main);
+  g.addColorStop(1, col.dark);
+  ctx.fillStyle = g;
+  ctx.fill();
+  // Facet lines radiating from the centre
+  ctx.save();
+  heartPath(ctx);
+  ctx.clip();
+  const spokes = [[-0.95, -0.25], [-0.55, -0.75], [0, -0.42], [0.55, -0.75], [0.95, -0.25], [0.5, 0.45], [0, 0.9], [-0.5, 0.45]];
+  spokes.forEach(([x, y], i) => {
+    const [x2, y2] = spokes[(i + 1) % spokes.length];
+    ctx.beginPath();
+    ctx.moveTo(-0.05, -0.08); ctx.lineTo(x, y); ctx.lineTo(x2, y2); ctx.closePath();
+    const mx = (x + x2) / 2; const my = (y + y2) / 2; const l = Math.hypot(mx, my) || 1;
+    const dot = (mx / l) * LIGHT[0] + (my / l) * LIGHT[1];
+    ctx.fillStyle = dot > 0 ? `rgba(255,255,255,${0.08 + dot * 0.3})` : `rgba(40,0,10,${0.06 - dot * 0.28})`;
+    ctx.fill();
+  });
+  ctx.restore();
+  heartPath(ctx, 0.45, -0.06);
+  ctx.fillStyle = 'rgba(255,190,205,0.35)';
+  ctx.fill();
+  heartPath(ctx);
+  goldRim(ctx);
 }
-function pathPlanet(ctx) {
-  ctx.beginPath();
-  ctx.arc(0, 0, 0.62, 0, Math.PI * 2);
-  ctx.closePath();
+
+function drawMoonstone(ctx, col) {
+  const moon = () => {
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.92, Math.PI * 0.3, Math.PI * 1.7, false);
+    ctx.arc(0.42, -0.08, 0.72, Math.PI * 1.43, Math.PI * 0.6, true);
+    ctx.closePath();
+  };
+  moon();
+  const g = ctx.createRadialGradient(-0.45, -0.3, 0.05, -0.2, 0, 1.1);
+  g.addColorStop(0, '#ffffff');
+  g.addColorStop(0.35, col.main);
+  g.addColorStop(0.8, '#8f9de0');
+  g.addColorStop(1, col.dark);
+  ctx.fillStyle = g;
+  ctx.fill();
+  // Blue adularescence sheen typical of moonstone
+  ctx.save();
+  moon();
+  ctx.clip();
+  const sheen = ctx.createRadialGradient(-0.5, 0.25, 0, -0.5, 0.25, 0.7);
+  sheen.addColorStop(0, 'rgba(120,180,255,0.75)');
+  sheen.addColorStop(1, 'rgba(120,180,255,0)');
+  ctx.fillStyle = sheen;
+  ctx.fillRect(-1, -1, 2, 2);
+  ctx.restore();
+  moon();
+  goldRim(ctx);
 }
-function pathCrown(ctx) {
-  ctx.beginPath();
-  ctx.moveTo(-0.85, 0.65);
-  ctx.lineTo(-0.9, -0.5);
-  ctx.lineTo(-0.45, -0.05);
-  ctx.lineTo(0, -0.8);
-  ctx.lineTo(0.45, -0.05);
-  ctx.lineTo(0.9, -0.5);
-  ctx.lineTo(0.85, 0.65);
-  ctx.closePath();
-}
-const PATHS = [pathHeart, (c) => pathStar(c), pathMoon, pathDiamond, pathPlanet, pathCrown];
 
 function drawGem(ctx, color, size) {
   const col = TILE_COLORS[color];
-  const s = size * 0.42;
+  const s = size * 0.4;
   ctx.save();
   ctx.translate(size / 2, size / 2);
-  // Parıltılı hale
-  const halo = ctx.createRadialGradient(0, 0, s * 0.2, 0, 0, s * 1.25);
-  halo.addColorStop(0, col.main + '55');
+  // Soft glow behind the jewel
+  const halo = ctx.createRadialGradient(0, 0, s * 0.3, 0, 0, s * 1.3);
+  halo.addColorStop(0, col.main + '50');
   halo.addColorStop(1, col.main + '00');
   ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.arc(0, 0, s * 1.25, 0, Math.PI * 2);
+  ctx.arc(0, 0, s * 1.3, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.scale(s, s);
-  if (color === 4) {
-    // gezegen halkası (arkada)
-    ctx.save();
-    ctx.rotate(-0.35);
-    ctx.lineWidth = 0.14;
-    ctx.strokeStyle = col.dark;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 1.0, 0.32, 0, Math.PI, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
-  }
-  PATHS[color](ctx);
-  const g = ctx.createRadialGradient(-0.3, -0.4, 0.05, 0, 0, 1.1);
-  g.addColorStop(0, col.light);
-  g.addColorStop(0.45, col.main);
-  g.addColorStop(1, col.dark);
-  ctx.fillStyle = g;
-  ctx.shadowColor = col.dark;
-  ctx.shadowBlur = 0.25 * s;
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  ctx.lineWidth = 0.08;
-  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-  ctx.stroke();
-  if (color === 4) {
-    ctx.save();
-    ctx.rotate(-0.35);
-    ctx.lineWidth = 0.14;
-    ctx.strokeStyle = col.light;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 1.0, 0.32, 0, 0, Math.PI);
-    ctx.stroke();
-    ctx.restore();
-  }
-  if (color === 5) {
-    // taç mücevherleri
-    ctx.fillStyle = '#fff';
-    for (const x of [-0.45, 0, 0.45]) { ctx.beginPath(); ctx.arc(x, 0.32, 0.11, 0, Math.PI * 2); ctx.fill(); }
-  }
-  // Parlama
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.beginPath();
-  ctx.ellipse(-0.3, -0.35, 0.22, 0.12, -0.6, 0, Math.PI * 2);
+  ctx.shadowColor = 'rgba(0, 0, 20, 0.55)';
+  ctx.shadowBlur = s * 0.18;
+  ctx.shadowOffsetY = s * 0.06;
+  if (color === 0) drawRuby(ctx, col);
+  else if (color === 5) drawMoonstone(ctx, col);
+  else facetedPolygon(ctx, CUTS[color], col, color === 1 ? 0.42 : 0.5);
+  ctx.shadowColor = 'transparent';
+
+  // Glint
+  ctx.fillStyle = 'rgba(255,255,255,0.95)';
+  ctx.translate(-0.38, -0.42);
+  ctx.scale(0.22, 0.22);
+  pathStar(ctx, 4, 0.28);
   ctx.fill();
   ctx.restore();
 }
@@ -281,9 +362,13 @@ export class Renderer {
         if (b.isHole(r, c)) continue;
         const x = this.ox + c * S;
         const y = this.oy + r * S;
-        ctx.fillStyle = (r + c) % 2 ? 'rgba(60, 20, 110, 0.55)' : 'rgba(85, 35, 140, 0.55)';
-        roundRect(ctx, x + 1, y + 1, S - 2, S - 2, S * 0.16);
+        // Midnight-blue glass tiles with a fine gold edge
+        ctx.fillStyle = (r + c) % 2 ? 'rgba(14, 22, 64, 0.72)' : 'rgba(24, 34, 88, 0.72)';
+        roundRect(ctx, x + 1.5, y + 1.5, S - 3, S - 3, S * 0.14);
         ctx.fill();
+        ctx.strokeStyle = 'rgba(214, 178, 96, 0.22)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
         const ice = b.ice[r][c];
         if (ice > 0) {
           const g = ctx.createLinearGradient(x, y, x + S, y + S);
@@ -306,9 +391,9 @@ export class Renderer {
     // Seçim ve ipucu
     if (this.selected) {
       const [cx, cy] = this.cellCenter(this.selected.r, this.selected.c);
-      ctx.strokeStyle = '#fff';
+      ctx.strokeStyle = '#ffe9a8';
       ctx.lineWidth = 3;
-      ctx.shadowColor = '#ff9de2';
+      ctx.shadowColor = '#ffd77a';
       ctx.shadowBlur = 12;
       roundRect(ctx, cx - S / 2 + 3, cy - S / 2 + 3, S - 6, S - 6, S * 0.18);
       ctx.stroke();
@@ -339,7 +424,7 @@ export class Renderer {
         ? ctx.createLinearGradient(0, cy - thick, 0, cy + thick)
         : ctx.createLinearGradient(cx - thick, 0, cx + thick, 0);
       g.addColorStop(0, 'rgba(255,255,255,0)');
-      g.addColorStop(0.5, `rgba(255,240,255,${a})`);
+      g.addColorStop(0.5, `rgba(235,240,255,${a})`);
       g.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = g;
       if (bm.horizontal) ctx.fillRect(this.ox, cy - thick, b.cols * S, thick * 2);
@@ -378,14 +463,14 @@ export class Renderer {
     for (const t of this.texts) {
       const a = Math.min(1, t.life / 400);
       ctx.globalAlpha = a;
-      ctx.font = `800 ${t.size}px "Baloo 2", system-ui, sans-serif`;
+      ctx.font = `900 ${t.size}px Cinzel, Georgia, serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.lineWidth = Math.max(3, t.size / 6);
-      ctx.strokeStyle = '#5a0f6e';
+      ctx.strokeStyle = '#1a1446';
       ctx.strokeText(t.text, t.x, t.y);
       const g = ctx.createLinearGradient(0, t.y - t.size / 2, 0, t.y + t.size / 2);
-      g.addColorStop(0, '#fff7c2');
+      g.addColorStop(0, '#fffbe6');
       g.addColorStop(1, t.color);
       ctx.fillStyle = g;
       ctx.fillText(t.text, t.x, t.y);
@@ -484,14 +569,14 @@ export class Renderer {
     }
   }
 
-  floatText(text, x, y, size, color = '#ff7ad9', life = 1100) {
+  floatText(text, x, y, size, color = '#e8b64a', life = 1100) {
     this.texts.push({ text, x, y, size, color, life, max: life });
   }
 
   bigText(text) {
     // Aynı anda tek büyük yazı: önceki büyük yazıyı hızla söndür
     for (const t of this.texts) if (t.big) t.life = Math.min(t.life, 150);
-    this.floatText(text, this.w / 2, this.h / 2, Math.min(56, this.w / 8), '#ff5fc8', 1500);
+    this.floatText(text, this.w / 2, this.h / 2, Math.min(48, this.w / 9), '#e8b64a', 1500);
     this.texts[this.texts.length - 1].big = true;
   }
 
@@ -502,7 +587,7 @@ export class Renderer {
       else if (step.type === 'clear') await this.animateClear(step);
       else if (step.type === 'fall') await this.animateFall(step);
       else if (step.type === 'shuffle') await this.animateShuffle(step);
-      else if (step.type === 'rebuild') { this.bigText('Karıştırılıyor...'); this.rebuild(true); await this.wait(700); }
+      else if (step.type === 'rebuild') { this.bigText('Shuffling...'); this.rebuild(true); await this.wait(700); }
       onStepDone(step);
     }
   }
@@ -536,7 +621,7 @@ export class Renderer {
       if (act.special === SP.ROW) { this.beams.push({ r: act.r, c: act.c, horizontal: true, life: 450, max: 450 }); this.onSound('line'); }
       if (act.special === SP.COL) { this.beams.push({ r: act.r, c: act.c, horizontal: false, life: 450, max: 450 }); this.onSound('line'); }
       if (act.special === SP.BOMB) {
-        this.rings.push({ x, y, radius: S * 2.2, life: 500, max: 500, rgb: '255,220,255' });
+        this.rings.push({ x, y, radius: S * 2.2, life: 500, max: 500, rgb: '255,226,160' });
         this.shake = Math.max(this.shake, 10);
         this.onSound('bomb');
       }
@@ -567,7 +652,7 @@ export class Renderer {
     }
     const n = step.cleared.length || 1;
     const [tx, ty] = this.cellCenter(sx / n, sy / n);
-    this.floatText(`+${step.points}`, tx, ty, Math.max(18, S * 0.45), '#ffd34d', 900);
+    this.floatText(`+${step.points}`, tx, ty, Math.max(16, S * 0.4), '#ffd77a', 900);
     if (step.cascade >= 2) {
       this.bigText(COMBO_WORDS[Math.min(step.cascade, COMBO_WORDS.length - 1)]);
       this.onSound('combo', step.cascade);
@@ -601,7 +686,7 @@ export class Renderer {
   }
 
   async animateShuffle(step) {
-    this.bigText('Karıştırılıyor...');
+    this.bigText('Shuffling...');
     const p = [];
     for (const pos of step.positions) {
       const v = this.visuals.get(pos.id);

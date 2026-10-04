@@ -1,9 +1,9 @@
 {
   "appId": "com.gokyuzuprensesi.oyun",
-  "appName": "Gökyüzü Prensesi",
+  "appName": "Sky Princess",
   "webDir": "www",
   "android": {
-    "backgroundColor": "#1a0636"
+    "backgroundColor": "#080b26"
   },
   "plugins": {
     "AdMob": {

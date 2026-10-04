@@ -1,4 +1,6 @@
-# Gökyüzü Prensesi ✨
+# The Sky Princess (Gökyüzü Prensesi) ✨
+
+Oyunun arayüzü İngilizcedir; bu belge Türkçedir.
 
 Kumar bağımlılığıyla mücadele eden kişilere **parasız, risksiz ve sakinleştirici** bir alternatif sunmayı hedefleyen,
 reklam gelirli bir 3'lü eşleştirme (match-3) oyunu. Android / Google Play için Capacitor ile paketlenir.
@@ -133,3 +135,16 @@ bir yerde saklayın; kaybederseniz uygulamayı güncelleyemezsiniz.
 | Oyun adı | `index.html`, `capacitor.config.json` | Gökyüzü Prensesi |
 
 Zorluğu değiştirdikten sonra `npm run simulate` ile kazanma oranlarını kontrol edin.
+
+## Görsel ve ses lisansları
+
+| Varlık | Kaynak | Lisans |
+|---|---|---|
+| Prenses görseli (`www/img/prenses*.jpg`, `arkaplan.jpg`) | Yapay zekâ ile üretildi (oyun sahibi) | Kullanılan aracın ticari kullanım şartlarına bağlı |
+| Prensesin sesi (`www/audio/*.mp3`) | [Kokoro-82M](https://github.com/hexgrad/kokoro) TTS, "af_heart" sesi | Apache 2.0 (ticari kullanım serbest) |
+| Yazı tipleri (Cinzel, Nunito) | Google Fonts | SIL Open Font License |
+| Mücevher ikonları, efektler | Kodla çizildi (`www/js/render.js`) | Projeye ait |
+
+Yeni ses satırı eklemek için: `pip install kokoro-onnx soundfile`, model dosyalarını
+[kokoro-onnx sürümlerinden](https://github.com/thewh1teagle/kokoro-onnx/releases) indirip `voice="af_heart"` ile üretin,
+`ffmpeg` ile mp3'e çevirip `www/audio/` klasörüne koyun ve `www/js/voice.js` içindeki listeye ekleyin.

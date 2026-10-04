@@ -1,22 +1,23 @@
-// Ses efektleri WebAudio ile sentezlenir (ses dosyası gerekmez).
+// Sound effects are synthesized with WebAudio (no audio files needed).
 let ctx = null;
 let enabled = true;
 const SCALE = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1567.98];
 
 export function setSoundEnabled(v) { enabled = v; }
+export function isSoundEnabled() { return enabled; }
 
-function ac() {
+export function audioContext() {
   if (!ctx) {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
     ctx = new AC();
   }
-  if (ctx.state === 'suspended') ctx.resume();
+  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
   return ctx;
 }
 
 function tone(freq, { dur = 0.15, type = 'sine', vol = 0.12, delay = 0, slide = 0 } = {}) {
-  const a = ac();
+  const a = audioContext();
   if (!a) return;
   const t = a.currentTime + delay;
   const o = a.createOscillator();
