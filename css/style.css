@@ -728,3 +728,29 @@ body[data-screen="map"] #sky { opacity: 0.75; }
 .modal { display: flex; flex-direction: column; padding: 0; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px - var(--safe-top) - var(--safe-bottom)); }
 .modal-scroll { overflow-y: auto; overscroll-behavior: contain; padding: 20px 18px; border-radius: 20px; }
 .modal-scroll::-webkit-scrollbar { width: 0; }
+
+/* Quests & achievements */
+.quests { text-align: left; }
+.q-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.q-tabs button {
+  flex: 1; padding: 8px 4px; border-radius: 12px; cursor: pointer; font: 800 13px var(--font-body); letter-spacing: 0.04em;
+  color: var(--muted); background: rgba(10, 14, 48, 0.7); border: 1.5px solid rgba(232, 182, 74, 0.35);
+}
+.q-tabs button.on { color: #1a1446; background: linear-gradient(180deg, var(--gold-light), var(--gold)); border-color: var(--gold-light); }
+.q-list { display: flex; flex-direction: column; gap: 8px; }
+.q-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 14px;
+  background: linear-gradient(180deg, rgba(42, 54, 144, 0.55), rgba(10, 14, 48, 0.75)); border: 1px solid rgba(232, 182, 74, 0.3);
+}
+.q-row.claimed { opacity: 0.55; }
+.q-row.q-bonus { border-color: var(--gold); box-shadow: 0 0 12px rgba(232, 182, 74, 0.25); }
+.q-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.q-info b { font-size: 13.5px; line-height: 1.2; }
+.q-info small { font-size: 11px; color: var(--muted); }
+.q-bar { height: 7px; border-radius: 4px; background: rgba(0, 0, 0, 0.45); overflow: hidden; }
+.q-bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #ff9cc0, var(--gold-light)); }
+.q-claim { min-width: 72px; padding: 8px 10px; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; gap: 3px; }
+.q-claim[disabled] { filter: grayscale(0.8) brightness(0.7); cursor: default; }
+.q-check { width: 72px; text-align: center; font-size: 22px; color: #6fe0a6; }
+.a-tier span { color: rgba(255, 255, 255, 0.22); font-size: 13px; }
+.a-tier span.on { color: var(--gold-light); text-shadow: 0 0 6px var(--gold); }

@@ -11,6 +11,10 @@ import {
   adCoinsLeft, grantAdCoins, AD_COINS, LIVES_REFILL_PRICE, EXTRA_MOVES_PRICE, EXTRA_MOVES,
   ensurePlayerId, redeemInvite, grantShareReward, INVITE_REWARD, SHARE_REWARD,
 } from './economy.js';
+import {
+  track, trackSteps, questList, claimQuest, bonusReady, claimBonus, achievementList, claimAchievement,
+  rewardsWaiting, ensureQuests, ALL_DONE_BONUS,
+} from './quests.js';
 import { load, save } from './storage.js';
 import { MAX_LIVES, refresh, loseLife, addLife, msToNext, formatMs } from './lives.js';
 import { Capacitor, registerPlugin } from '../vendor/capacitor-core.js';
@@ -157,6 +161,7 @@ function updateCoinsUI() {
   $('#wand-count').textContent = state.items.wand || '+';
   $('#btn-wand').classList.toggle('empty', !state.items.wand);
   $('#daily-dot').hidden = !dailyStatus(state).available;
+  $('#quests-dot').hidden = !rewardsWaiting(state);
 }
 function addCoins(n) {
   state.coins += n;
@@ -327,6 +332,50 @@ async function openDaily(auto = false) {
 }
 $('#btn-daily').addEventListener('click', () => openDaily(false));
 
+// ---------- Daily quests & achievements ----------
+function openQuests(tab = 'quests') {
+  const body = document.createElement('div');
+  body.className = 'quests';
+  const bar = (v, n) => `<div class="q-bar"><i style="width:${Math.min(100, (v / n) * 100)}%"></i></div>`;
+  const render = () => {
+    const tabs = `<div class="q-tabs"><button data-tab="quests" class="${tab === 'quests' ? 'on' : ''}">${t('questsTab')}</button><button data-tab="ach" class="${tab === 'ach' ? 'on' : ''}">${t('achTab')}</button></div>`;
+    let list = '';
+    if (tab === 'quests') {
+      const qs = questList(state);
+      list = qs.map((q) => `<div class="q-row ${q.claimed ? 'claimed' : ''}"><div class="q-info"><b>${t(`q_${q.id}`, { n: q.n })}</b>${bar(q.prog, q.n)}<small>${fmt(q.prog)} / ${fmt(q.n)}</small></div>`
+        + (q.claimed ? '<span class="q-check">✓</span>' : `<button class="btn btn-primary q-claim" data-q="${q.id}" ${q.done ? '' : 'disabled'}>${COIN}${q.coins}</button>`) + '</div>').join('');
+      const done = state.quests.claimed.length;
+      list += `<div class="q-row q-bonus ${state.quests.bonus ? 'claimed' : ''}"><div class="q-info"><b>👑 ${t('q_bonus')}</b>${bar(done, qs.length)}<small>${done} / ${qs.length}</small></div>`
+        + (state.quests.bonus ? '<span class="q-check">✓</span>' : `<button class="btn btn-primary q-claim" data-bonus="1" ${bonusReady(state) ? '' : 'disabled'}>${COIN}${ALL_DONE_BONUS}</button>`) + '</div>';
+      list += `<p class="small">${t('questsReset')}</p>`;
+    } else {
+      list = achievementList(state).map((a) => {
+        const crowns = [0, 1, 2].map((i) => `<span class="${i < a.tier ? 'on' : ''}">♛</span>`).join('');
+        return `<div class="q-row ${a.maxed ? 'claimed' : ''}"><div class="q-info"><b>${t(`a_${a.id}`)} <span class="a-tier">${crowns}</span></b><small class="a-desc">${t(`ad_${a.stat}`, { n: fmt(a.target) })}</small>${bar(a.value, a.target)}<small>${fmt(Math.min(a.value, a.target))} / ${fmt(a.target)}</small></div>`
+          + (a.maxed ? '<span class="q-check">✓</span>' : `<button class="btn btn-primary q-claim" data-a="${a.id}" ${a.ready ? '' : 'disabled'}>${COIN}${a.coinsNext}</button>`) + '</div>';
+      }).join('');
+    }
+    body.innerHTML = tabs + `<div class="q-list">${list}</div>`;
+  };
+  body.addEventListener('click', (e) => {
+    const tb = e.target.closest('[data-tab]');
+    if (tb) { tab = tb.dataset.tab; sfx('select'); render(); return; }
+    const btn = e.target.closest('.q-claim');
+    if (!btn || btn.disabled) return;
+    const got = btn.dataset.q ? claimQuest(state, btn.dataset.q) : btn.dataset.a ? claimAchievement(state, btn.dataset.a) : claimBonus(state);
+    if (!got) return;
+    save(state);
+    updateCoinsUI();
+    sfx('win');
+    say(pick(['yay', 'hehe', 'giggle1']));
+    toast(t('dailyGot', { n: got }));
+    render();
+  });
+  render();
+  return modal({ title: t('questsTitle'), body, buttons: [{ label: t('ok'), value: 'ok', cls: 'btn-ghost' }] });
+}
+$('#btn-quests').addEventListener('click', () => openQuests());
+
 setInterval(() => {
   updateLivesUI();
   if (currentScreen === 'game' && !document.hidden) trackPlayTime();
@@ -469,11 +518,11 @@ function renderMap() {
   path.innerHTML = '';
   const w = Math.min(scroller.clientWidth || 360, 520);
   const total = LEVEL_COUNT;
-  const height = total * NODE_GAP + 330;
+  const height = total * NODE_GAP + 420;
   path.style.height = `${height}px`;
   const pos = (n) => ({
     x: w / 2 + Math.sin(n * 0.85) * w * 0.3,
-    y: height - 140 - (n - 1) * NODE_GAP,
+    y: height - 230 - (n - 1) * NODE_GAP,
   });
   // Golden road; the part already travelled glows
   const road = (upTo) => {
@@ -710,7 +759,7 @@ async function startLevel(n) {
   renderer.setEngine(engine);
   // Place the chosen boosters on the board
   const specials = [];
-  for (const id of chosen) if (useItem(state, id)) specials.push(...ITEMS[id].specials);
+  for (const id of chosen) if (useItem(state, id)) { specials.push(...ITEMS[id].specials); track(state, 'booster'); }
   if (bonus) {
     engine.addMoves(bonus.moves);
     specials.push(...bonus.specials);
@@ -853,6 +902,8 @@ async function handleWand(cell) {
   haptic(30);
   await renderer.wait(250);
   await renderer.playSteps(result.steps, (step) => { if (step.type === 'clear') updateHUD(step.score); });
+  track(state, 'booster');
+  trackSteps(state, result.steps);
   updateHUD();
   renderer.busy = false;
   cheer('my-hero', t('p_myHero'), 1800, 'kiss');
@@ -881,6 +932,7 @@ async function handleSwap(a, b) {
     if (step.activations.length) haptic(15);
     updateHUD(step.score);
   });
+  trackSteps(state, result.steps);
   updateHUD();
   renderer.busy = false;
   if (!engine.finished && !praiseMove(bestCascade, specials, rainbow)) stagePrincess.react('nod');
@@ -1016,6 +1068,10 @@ async function winFlow() {
   const shards = addShards(state, stars);
   state.coins += reward;
   state.streak = (state.streak || 0) + 1;
+  track(state, 'win');
+  track(state, 'stars', stars);
+  if (stars === 3) track(state, 'three');
+  track(state, 'streak', state.streak);
   state.stars[n] = Math.max(state.stars[n] || 0, stars);
   state.best[n] = Math.max(state.best[n] || 0, engine.score);
   if (n === state.maxLevel && n < LEVEL_COUNT) state.maxLevel = n + 1;
