@@ -13,7 +13,7 @@ Gerçek para, bahis veya şans çarkı içermeyen, sakinleştirici ve reklam gel
 | Seviyeler | 200 seviye: puan, taş toplama ve kristal buz kırma hedefleri. Her 10 seviyenin son ikisi "zor seviye" |
 | Zorluk | Seviye arttıkça daha az hamle, daha çok renk, daha yüksek hedef, tahtada boşluklar, çift katlı buz |
 | Can | En fazla **5 can**, her can **30 dakikada** yenilenir. Seviye kaybedilince veya yarıda bırakılınca 1 can gider |
-| Reklamlar | **Her 5 seviyede bir** otomatik geçiş reklamı; hamle bitince **reklam izle → +3 hamle** (deneme başına en fazla 2 kez); can bitince reklam izle → +1 can |
+| Reklamlar | **90 saniyelik oyundan sonra** (veya her 5 seviyede) bir sonraki doğal molada otomatik geçiş reklamı — oyunun ortasında asla açılmaz; hamle bitince **reklam izle → +3 hamle** (deneme başına en fazla 2 kez); can bitince reklam izle → +1 can |
 | Prenses | Nefes alan, göz kırpan, cilveli hareketler yapan ve İngilizce konuşan karakter; dokununca kıkırdar |
 | Ses | Özgün menü ve oyun müzikleri, çan tınılı efektler; ayarlardan ayrı ayrı kapatılabilir |
 | Sağlıklı oyun | 30 dakikalık kesintisiz oyunda mola hatırlatması. Şans çarkı, ganimet kutusu, gerçek para yok |
@@ -134,7 +134,7 @@ bir yerde saklayın; kaybederseniz uygulamayı güncelleyemezsiniz.
 | Değer | Dosya | Varsayılan |
 |---|---|---|
 | Maksimum can / yenilenme süresi | `js/lives.js` → `MAX_LIVES`, `REGEN_MS` | 5 / 30 dk |
-| Kaç seviyede bir geçiş reklamı | `js/ads.js` → `INTERSTITIAL_EVERY_N_LEVELS` | 5 |
+| Geçiş reklamı sıklığı | `js/ads.js` → `INTERSTITIAL_EVERY_SECONDS`, `INTERSTITIAL_EVERY_N_LEVELS` | 90 sn / 5 seviye |
 | Reklamla kazanılan hamle / hak sayısı | `js/main.js` → `CONTINUE_MOVES`, `MAX_CONTINUES` | 3 / 2 |
 | Mola hatırlatması | `js/main.js` → `BREAK_REMINDER_SECONDS` | 30 dk |
 | Zorluk eğrisi | `js/levels.js` → `difficulty`, hamle formülleri | — |

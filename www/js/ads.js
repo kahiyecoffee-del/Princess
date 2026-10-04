@@ -13,6 +13,8 @@ export const AD_CONFIG = {
   INTERSTITIAL_ID: 'ca-app-pub-3940256099942544/1033173712',
   REWARDED_ID: 'ca-app-pub-3940256099942544/5224354917',
   INTERSTITIAL_EVERY_N_LEVELS: 5,
+  // Interstitial after this much play time, shown at the next natural break (never mid-move).
+  INTERSTITIAL_EVERY_SECONDS: 90,
 };
 
 // Capacitor 8'de yerel eklentiler registerPlugin ile kaydedilmeden JS'ten erişilemez.
