@@ -49,6 +49,52 @@ def save(img, name):
     img.resize((900, 900), Image.LANCZOS).save(f'www/img/{name}', quality=84, optimize=True, progressive=True)
 
 
+# Mouth line (upper/lower lip meeting line), from the left corner to the right corner
+MOUTH = [(592, 398), (604, 402), (616, 407), (628, 412), (640, 417), (651, 423)]
+
+
+def open_mouth(img, amount):
+    """Opens the mouth by `amount` pixels: the lower lip moves down along the
+    face's tilt and the gap shows a dark mouth with a hint of teeth."""
+    import math
+    (x0, y0), (x1, y1) = MOUTH[0], MOUTH[-1]
+    L = math.hypot(x1 - x0, y1 - y0)
+    nx, ny = -(y1 - y0) / L, (x1 - x0) / L  # perpendicular, pointing down-left
+    if ny < 0:
+        nx, ny = -nx, -ny
+    # taper: no opening at the corners, full in the middle
+    def taper(i):
+        t = i / (len(MOUTH) - 1)
+        return math.sin(math.pi * t) ** 0.6
+    lower = [(x + nx * (amount * taper(i) + 3), y + ny * (amount * taper(i) + 3)) for i, (x, y) in enumerate(MOUTH)]
+    # 1) move the lower lip down
+    lip_poly = [(x + nx * 3, y + ny * 3) for (x, y) in MOUTH] + [(x + nx * 18, y + ny * 18) for (x, y) in reversed(MOUTH)]
+    mask = Image.new('L', img.size, 0)
+    ImageDraw.Draw(mask).polygon(lip_poly, fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(1.5))
+    shifted = img.transform(img.size, Image.AFFINE, (1, 0, -nx * amount, 0, 1, -ny * amount), resample=Image.BICUBIC)
+    shifted_mask = mask.transform(img.size, Image.AFFINE, (1, 0, -nx * amount, 0, 1, -ny * amount))
+    out = img.copy()
+    out.paste(shifted, (0, 0), shifted_mask)
+    # 2) dark mouth interior between the upper lip line and the lowered lip
+    d = ImageDraw.Draw(out)
+    cavity = MOUTH + list(reversed(lower))
+    d.polygon(cavity, fill=(84, 22, 34))
+    # tongue hint near the bottom, teeth hint along the top
+    tongue = [(x + nx * amount * taper(i) * 0.55, y + ny * amount * taper(i) * 0.55) for i, (x, y) in enumerate(MOUTH)]
+    d.polygon(tongue[1:-1] + list(reversed(lower[1:-1])), fill=(170, 70, 84))
+    teeth = [(x + nx * 3.2 * taper(i), y + ny * 3.2 * taper(i)) for i, (x, y) in enumerate(MOUTH)]
+    d.polygon(MOUTH[1:-1] + list(reversed(teeth[1:-1])), fill=(246, 236, 236))
+    d.line(MOUTH, fill=(70, 20, 30), width=2, joint='curve')
+    # soften the edit so it blends with the painting
+    region = (min(x for x, _ in MOUTH) - 6, min(y for _, y in MOUTH) - 6, max(x for x, _ in lower) + 8, max(y for _, y in lower) + 12)
+    soft = out.crop(region).filter(ImageFilter.GaussianBlur(0.7))
+    out.paste(soft, region[:2])
+    return out
+
+
 save(close_eye(close_eye(src.copy(), 'left'), 'right'), 'prenses-blink.jpg')
+save(open_mouth(src, 5), 'prenses-talk1.jpg')
+save(open_mouth(src, 10), 'prenses-talk2.jpg')
 save(close_eye(src.copy(), 'right', happy=True), 'prenses-wink.jpg')
 print('ok')

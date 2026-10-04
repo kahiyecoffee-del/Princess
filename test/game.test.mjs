@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Board, SP, mulberry32 } from '../www/js/board.js';
 import { Engine } from '../www/js/engine.js';
 import { getLevel, LEVEL_COUNT } from '../www/js/levels.js';
+import { initEconomy, buyItem, useItem, claimDaily, dailyStatus, grantAdCoins, levelReward, ITEMS } from '../www/js/economy.js';
 import { createLives, loseLife, refresh, msToNext, addLife, REGEN_MS, MAX_LIVES } from '../www/js/lives.js';
 
 // Tahtayı elle kurmak için yardımcı: harfler renk, '.' boşluk
@@ -126,3 +127,35 @@ test('canlar: hepsi bitince 0, reklamla 1 can eklenir, fazla dolmaz', () => {
 });
 
 
+
+test('güçlendiriciler: özel taş yerleştirme ve asa', () => {
+  const e = new Engine(getLevel(5), 7);
+  const placed = e.placeSpecials([SP.ROW, SP.BOMB, SP.RAINBOW], mulberry32(3));
+  assert.equal(placed.length, 3);
+  assert.deepEqual(placed.map((p) => p.tile.special), [SP.ROW, SP.BOMB, SP.RAINBOW]);
+  const moves = e.movesLeft;
+  const r = e.useWand(0, 0);
+  assert.ok(r.valid);
+  assert.equal(e.movesLeft, moves, 'asa hamle harcamaz');
+  assert.ok(e.score > 0);
+  assert.ok(e.board.grid[0][0], 'kırılan hücre yeniden dolar');
+});
+
+test('ekonomi: satın alma, kullanma, günlük ödül serisi, reklam parası sınırı', () => {
+  const st = initEconomy({});
+  assert.equal(st.coins, 200);
+  assert.ok(buyItem(st, 'lance'));
+  assert.equal(st.coins, 200 - ITEMS.lance.price);
+  assert.equal(st.items.lance, 2);
+  assert.equal(buyItem(st, 'orb'), false, 'yetersiz bakiye');
+  assert.ok(useItem(st, 'lance'));
+  assert.equal(st.items.lance, 1);
+  const d1 = new Date(2026, 9, 1); const d2 = new Date(2026, 9, 2); const d4 = new Date(2026, 9, 4);
+  assert.equal(claimDaily(st, d1).day, 1);
+  assert.equal(claimDaily(st, d1), null, 'aynı gün ikinci kez alınamaz');
+  assert.equal(claimDaily(st, d2).day, 2);
+  assert.equal(dailyStatus(st, d4).day, 1, 'gün atlanınca seri sıfırlanır');
+  for (let i = 0; i < 5; i++) assert.ok(grantAdCoins(st, d1));
+  assert.equal(grantAdCoins(st, d1), false);
+  assert.ok(levelReward(3, true) > levelReward(3, false));
+});

@@ -39,6 +39,37 @@ const buffers = new Map();
 let loading = null;
 let current = null;
 
+// Lip-sync: report the voice's loudness (0..1) about 30 times a second.
+let mouthListener = null;
+let analyser = null;
+let levelLoop = 0;
+export function setMouthListener(fn) { mouthListener = fn; }
+function trackLevel(ctx, until) {
+  cancelAnimationFrame(levelLoop);
+  const data = new Uint8Array(analyser.fftSize);
+  const tick = () => {
+    if (ctx.currentTime > until) { mouthListener?.(0); return; }
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
+    mouthListener?.(Math.min(1, Math.sqrt(sum / data.length) * 4.2));
+    levelLoop = requestAnimationFrame(tick);
+  };
+  levelLoop = requestAnimationFrame(tick);
+}
+// For the <audio> fallback there is no level data, so the lips flap with the syllable rhythm.
+function flapWhilePlaying(el) {
+  cancelAnimationFrame(levelLoop);
+  const t0 = performance.now();
+  const tick = (t) => {
+    if (el.paused || el.ended) { mouthListener?.(0); return; }
+    const k = (t - t0) / 1000;
+    mouthListener?.(Math.max(0, Math.sin(k * 21) * 0.5 + Math.sin(k * 7.3) * 0.35 + 0.15));
+    levelLoop = requestAnimationFrame(tick);
+  };
+  levelLoop = requestAnimationFrame(tick);
+}
+
 function decode(ctx, data) {
   return new Promise((resolve, reject) => {
     const p = ctx.decodeAudioData(data, resolve, reject);
@@ -86,15 +117,17 @@ export function say(key) {
     try { current?.stop(); } catch { /* already stopped */ }
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.connect(ctx.destination);
+    if (!analyser) { analyser = ctx.createAnalyser(); analyser.fftSize = 512; analyser.connect(ctx.destination); }
+    src.connect(analyser);
     src.start(0);
     current = src;
+    trackLevel(ctx, ctx.currentTime + buf.duration);
     return;
   }
   // Fallback while clips are still loading, or if Web Audio is unavailable
   fallbackVoice.pause();
   fallbackVoice.src = `audio/${key}.mp3`;
-  fallbackVoice.play().catch(() => {});
+  fallbackVoice.play().then(() => flapWhilePlaying(fallbackVoice)).catch(() => {});
   preloadVoices();
 }
 

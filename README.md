@@ -12,6 +12,7 @@ Gerçek para, bahis veya şans çarkı içermeyen, sakinleştirici ve reklam gel
 | Özel taşlar | 4'lü → satır/sütun ışını, L/T → yıldız bombası (3×3), 5'li → gökkuşağı küresi (bir rengin tamamı) |
 | Seviyeler | 200 seviye: puan, taş toplama ve kristal buz kırma hedefleri. Her 10 seviyenin son ikisi "zor seviye" |
 | Zorluk | Seviye arttıkça daha az hamle, daha çok renk, daha yüksek hedef, tahtada boşluklar, çift katlı buz |
+| Ekonomi | Altın para: seviye ödülleri (ilk geçiş + yıldıza göre), 7 günlük giriş hediyesi, reklam izle +40 (günde 5). Kraliyet Marketi: Comet Lance, Star Bomb, Celestial Orb (seviye başı güçlendiriciler), Royal Wand (oyun içi), can doldurma, +5 hamle |
 | Can | En fazla **5 can**, her can **30 dakikada** yenilenir. Seviye kaybedilince veya yarıda bırakılınca 1 can gider |
 | Reklamlar | **90 saniyelik oyundan sonra** (veya her 5 seviyede) bir sonraki doğal molada otomatik geçiş reklamı — oyunun ortasında asla açılmaz; hamle bitince **reklam izle → +3 hamle** (deneme başına en fazla 2 kez); can bitince reklam izle → +1 can |
 | Prenses | Nefes alan, göz kırpan, cilveli hareketler yapan ve İngilizce konuşan karakter; dokununca kıkırdar |
@@ -30,7 +31,8 @@ www/                  Oyunun kendisi (Capacitor'ın webDir'i)
   js/render.js        Canvas çizimi, animasyonlar, parçacık efektleri, dokunma girişi
   js/lives.js         Can sistemi (5 can / 30 dk)
   js/ads.js           AdMob entegrasyonu (+ tarayıcı için sahte reklam)
-  js/princess.js      Prensesin animasyonları
+  js/princess.js      Prensesin animasyonları (nefes, göz kırpma, dudak senkronu)
+  js/economy.js       Para, market ürünleri, günlük hediye
   js/voice.js         Prensesin sesi ve müzik
   js/main.js          Oyun akışı, menüler, modallar
 test/                 Birim testleri (node --test)
@@ -149,7 +151,8 @@ Zorluğu değiştirdikten sonra `npm run simulate` ile kazanma oranlarını kont
 | Prenses görseli (`www/img/prenses*.jpg`, `arkaplan.jpg`) | ChatGPT (OpenAI) ile üretildi (oyun sahibi) | OpenAI kullanım şartları: çıktı kullanıcıya ait, ticari kullanım serbest |
 | Prensesin sesi (`www/audio/*.mp3`) | [Kokoro-82M](https://github.com/hexgrad/kokoro) TTS, "af_heart" sesi | Apache 2.0 (ticari kullanım serbest) |
 | Arka plan müziği (`www/audio/music-*.mp3`) | `tools/compose_music.py` ile kodla bestelendi | Projeye ait |
-| Göz kırpma kareleri (`prenses-blink/wink.jpg`) | `tools/make_frames.py` ile portreden üretildi | Projeye ait |
+| Göz kırpma ve konuşma kareleri (`prenses-blink/wink/talk*.jpg`) | `tools/make_frames.py` ile portreden üretildi | Projeye ait |
+| Harita arka planı (`harita.jpg`) | Prenses görselinden kırpıldı | Görselin lisansı |
 | Yazı tipleri (Cinzel, Nunito) | Google Fonts | SIL Open Font License |
 | Mücevher ikonları, efektler | Kodla çizildi (`www/js/render.js`) | Projeye ait |
 

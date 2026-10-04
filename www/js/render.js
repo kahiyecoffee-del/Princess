@@ -216,9 +216,187 @@ function drawGem(ctx, color, size) {
   ctx.restore();
 }
 
+
+// ---------- Premium special jewels ----------
+// Drawn around (0,0) in a cell of size S. `time` drives the animation.
+function goldGradient(ctx, x0, y0, x1, y1) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, '#fff6d0');
+  g.addColorStop(0.4, '#f0c55a');
+  g.addColorStop(0.75, '#a8741c');
+  g.addColorStop(1, '#f6d77e');
+  return g;
+}
+
+function drawCometLance(ctx, color, S, time, vertical) {
+  const col = TILE_COLORS[color];
+  ctx.save();
+  if (vertical) ctx.rotate(Math.PI / 2);
+  const L = S * 0.47;
+  // Energy band
+  const band = ctx.createLinearGradient(0, -S * 0.09, 0, S * 0.09);
+  band.addColorStop(0, 'rgba(255,255,255,0)');
+  band.addColorStop(0.5, col.light);
+  band.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = band;
+  ctx.globalAlpha = 0.55 + 0.25 * Math.sin(time / 180);
+  ctx.fillRect(-L, -S * 0.09, L * 2, S * 0.18);
+  // Running light streak
+  const k = ((time / 700) % 1) * 2 - 1;
+  const streak = ctx.createRadialGradient(k * L, 0, 0, k * L, 0, S * 0.22);
+  streak.addColorStop(0, 'rgba(255,255,255,0.95)');
+  streak.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = streak;
+  ctx.fillRect(-L, -S * 0.2, L * 2, S * 0.4);
+  ctx.globalCompositeOperation = 'source-over';
+  // Gold lance with arrow tips
+  ctx.fillStyle = goldGradient(ctx, 0, -S * 0.03, 0, S * 0.03);
+  ctx.fillRect(-L * 0.78, -S * 0.022, L * 1.56, S * 0.044);
+  for (const dir of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(dir * L, 0);
+    ctx.lineTo(dir * L * 0.72, -S * 0.085);
+    ctx.lineTo(dir * L * 0.78, 0);
+    ctx.lineTo(dir * L * 0.72, S * 0.085);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(60,30,0,0.6)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawStarFrame(ctx, color, S, time) {
+  const col = TILE_COLORS[color];
+  const pulse = 1 + 0.05 * Math.sin(time / 160);
+  // Glow
+  const glow = ctx.createRadialGradient(0, 0, S * 0.1, 0, 0, S * 0.55);
+  glow.addColorStop(0, col.main + 'aa');
+  glow.addColorStop(1, col.main + '00');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(0, 0, S * 0.55 * pulse, 0, Math.PI * 2); ctx.fill();
+  // Eight-pointed gold star, slowly turning
+  ctx.save();
+  ctx.rotate(time / 2600);
+  ctx.beginPath();
+  for (let i = 0; i < 16; i++) {
+    const r = (i % 2 ? 0.3 : 0.5) * S * pulse;
+    const a = (Math.PI * i) / 8;
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fillStyle = goldGradient(ctx, -S * 0.4, -S * 0.4, S * 0.4, S * 0.4);
+  ctx.shadowColor = 'rgba(255,210,120,0.9)';
+  ctx.shadowBlur = S * 0.15;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = 'rgba(80,40,0,0.55)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawStarSparks(ctx, S, time) {
+  ctx.fillStyle = '#fffbe6';
+  for (let i = 0; i < 4; i++) {
+    const a = time / 600 + (i * Math.PI) / 2;
+    const r = S * 0.47;
+    ctx.save();
+    ctx.translate(Math.cos(a) * r, Math.sin(a) * r);
+    ctx.scale(S * 0.05, S * 0.05);
+    pathStar(ctx, 4, 0.3);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawCelestialOrb(ctx, S, time) {
+  const r = S * 0.34;
+  // Halo
+  const halo = ctx.createRadialGradient(0, 0, r * 0.5, 0, 0, r * 1.6);
+  halo.addColorStop(0, 'rgba(200,220,255,0.6)');
+  halo.addColorStop(1, 'rgba(160,120,255,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(0, 0, r * 1.6, 0, Math.PI * 2); ctx.fill();
+  // Back half of the gold rings
+  const ring = (tilt, phase, front) => {
+    ctx.save();
+    ctx.rotate(tilt);
+    ctx.beginPath();
+    const squash = 0.32 + 0.08 * Math.sin(time / 900 + phase);
+    ctx.ellipse(0, 0, r * 1.32, r * 1.32 * squash, 0, front ? 0 : Math.PI, front ? Math.PI : Math.PI * 2);
+    ctx.strokeStyle = goldGradient(ctx, -r, -r, r, r);
+    ctx.lineWidth = S * 0.045;
+    ctx.stroke();
+    ctx.restore();
+  };
+  ring(-0.5, 0, false);
+  ring(0.7, 2, false);
+  // Crystal sphere with a turning nebula
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+  const space = ctx.createRadialGradient(-r * 0.3, -r * 0.3, r * 0.1, 0, 0, r);
+  space.addColorStop(0, '#3a2a8a');
+  space.addColorStop(1, '#0a0828');
+  ctx.fillStyle = space;
+  ctx.fillRect(-r, -r, r * 2, r * 2);
+  ctx.rotate(time / 1500);
+  ctx.globalCompositeOperation = 'lighter';
+  TILE_COLORS.forEach((c, i) => {
+    const a = (i / TILE_COLORS.length) * Math.PI * 2;
+    const g = ctx.createRadialGradient(Math.cos(a) * r * 0.45, Math.sin(a) * r * 0.45, 0, Math.cos(a) * r * 0.45, Math.sin(a) * r * 0.45, r * 0.75);
+    g.addColorStop(0, c.main + '88');
+    g.addColorStop(1, c.main + '00');
+    ctx.fillStyle = g;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+  });
+  ctx.fillStyle = '#ffffff';
+  for (let i = 0; i < 7; i++) {
+    const a = i * 2.4;
+    const d = r * (0.2 + (i % 3) * 0.25);
+    ctx.globalAlpha = 0.5 + 0.5 * Math.sin(time / 300 + i);
+    ctx.beginPath(); ctx.arc(Math.cos(a) * d, Math.sin(a) * d, S * 0.012 + (i % 2) * S * 0.01, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+  // Glass highlight and rim
+  const gl = ctx.createLinearGradient(0, -r, 0, r);
+  gl.addColorStop(0, 'rgba(255,255,255,0.55)');
+  gl.addColorStop(0.45, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gl;
+  ctx.beginPath(); ctx.ellipse(-r * 0.15, -r * 0.35, r * 0.6, r * 0.38, -0.4, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
+  // Front half of the rings
+  ring(-0.5, 0, true);
+  ring(0.7, 2, true);
+}
+
+// Draws a whole jewel (normal or special). `sprites` are cached normal gems.
+export function drawJewel(ctx, tile, S, time = 0, sprites = null) {
+  const sp = tile.special;
+  if (sp === SP.RAINBOW) { drawCelestialOrb(ctx, S, time); return; }
+  if (sp === SP.BOMB) drawStarFrame(ctx, tile.color, S, time);
+  if (sprites) ctx.drawImage(sprites[tile.color], -S / 2, -S / 2, S, S);
+  else {
+    ctx.save();
+    ctx.translate(-S / 2, -S / 2);
+    drawGem(ctx, tile.color, S);
+    ctx.restore();
+  }
+  if (sp === SP.ROW || sp === SP.COL) drawCometLance(ctx, tile.color, S, time, sp === SP.COL);
+  if (sp === SP.BOMB) drawStarSparks(ctx, S, time);
+}
+
 export class Renderer {
-  constructor(canvas, { onSwap, onSound, onHint }) {
+  constructor(canvas, { onSwap, onSound, onHint, onWand }) {
     this.onHint = onHint;
+    this.onWand = onWand;
+    this.wandMode = false;
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.onSwap = onSwap;
@@ -491,66 +669,18 @@ export class Renderer {
     ctx.globalAlpha = v.alpha;
     ctx.translate(x + S / 2, y + S / 2);
     ctx.scale(scale, scale);
-    if (t.special === SP.RAINBOW) {
-      this.drawRainbow(S);
-    } else {
-      ctx.drawImage(this.sprites[t.color], -S / 2, -S / 2, S, S);
-      if (t.special === SP.ROW || t.special === SP.COL) {
-        const shimmer = (this.time / 600) % 1;
-        ctx.save();
-        if (t.special === SP.COL) ctx.rotate(Math.PI / 2);
-        ctx.globalCompositeOperation = 'lighter';
-        for (let i = -1; i <= 1; i++) {
-          ctx.fillStyle = `rgba(255,255,255,${0.35 + 0.25 * Math.sin((shimmer + i * 0.3) * Math.PI * 2)})`;
-          ctx.fillRect(-S * 0.36, i * S * 0.16 - S * 0.035, S * 0.72, S * 0.07);
-        }
-        ctx.restore();
-      } else if (t.special === SP.BOMB) {
-        const pulse = 1 + 0.08 * Math.sin(this.time / 150);
-        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = TILE_COLORS[t.color].main;
-        ctx.shadowBlur = 14;
-        ctx.beginPath();
-        ctx.arc(0, 0, S * 0.44 * pulse, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#fff';
-        for (let i = 0; i < 4; i++) {
-          const a = this.time / 500 + (i * Math.PI) / 2;
-          ctx.beginPath();
-          ctx.arc(Math.cos(a) * S * 0.44 * pulse, Math.sin(a) * S * 0.44 * pulse, 2.5, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-    }
+    drawJewel(ctx, t, S, this.time, this.sprites);
     ctx.restore();
   }
 
-  drawRainbow(S) {
-    const { ctx } = this;
-    const r = S * 0.38;
-    const rot = this.time / 700;
-    ctx.save();
-    ctx.rotate(rot);
-    const halo = ctx.createRadialGradient(0, 0, r * 0.3, 0, 0, r * 1.4);
-    halo.addColorStop(0, 'rgba(255,255,255,0.7)');
-    halo.addColorStop(1, 'rgba(255,200,255,0)');
-    ctx.fillStyle = halo;
-    ctx.beginPath(); ctx.arc(0, 0, r * 1.4, 0, Math.PI * 2); ctx.fill();
-    TILE_COLORS.forEach((col, i) => {
-      ctx.fillStyle = col.main;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, r, (i / 6) * Math.PI * 2, ((i + 1) / 6) * Math.PI * 2);
-      ctx.closePath();
-      ctx.fill();
-    });
-    ctx.fillStyle = '#fff';
-    ctx.scale(r * 0.55, r * 0.55);
-    pathStar(ctx, 5, 0.45);
-    ctx.fill();
-    ctx.restore();
+
+  // Royal Wand strike: a falling star of light onto the chosen cell
+  wandStrike(r, c) {
+    const [x, y] = this.cellCenter(r, c);
+    this.beams.push({ r, c, horizontal: false, life: 300, max: 300 });
+    this.rings.push({ x, y, radius: this.cell * 1.6, life: 600, max: 600, rgb: '255,236,170' });
+    this.burst(r, c, -1, 26, 1.6);
+    this.shake = Math.max(this.shake, 8);
   }
 
   // --- Efektler ---
@@ -725,6 +855,11 @@ export class Renderer {
       this.lastInput = performance.now();
       this.hint = null;
       if (this.busy) return;
+      if (this.wandMode) {
+        const cell = this.cellFromEvent(e);
+        if (cell) this.onWand?.(cell);
+        return;
+      }
       start = this.cellFromEvent(e);
       if (start) this.canvas.setPointerCapture(e.pointerId);
     });
