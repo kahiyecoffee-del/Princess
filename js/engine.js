@@ -5,6 +5,7 @@ import { Board, SP, mulberry32 } from './board.js';
 export const SPECIAL_BONUS = { [SP.ROW]: 60, [SP.COL]: 60, [SP.BOMB]: 120, [SP.RAINBOW]: 200 };
 export const POINTS_PER_TILE = 20;
 export const LEFTOVER_MOVE_BONUS = 250;
+export const FINALE_MOVE_BONUS = 100;
 
 export class Engine {
   constructor(level, seed = Date.now()) {
@@ -131,6 +132,44 @@ export class Engine {
       placed.push({ r, c, tile: b.grid[r][c] });
     }
     return placed;
+  }
+
+  // Kraliyet Finali: kazanınca kalan hamleler rastgele mücevherleri ışık mızrağına
+  // çevirir, sonra tahtadaki tüm özel taşlar art arda patlar.
+  finale(rng = Math.random, maxConvert = 12) {
+    const steps = [];
+    const leftover = this.movesLeft;
+    const bonus = leftover * FINALE_MOVE_BONUS;
+    this.movesLeft = 0;
+    this.score += bonus;
+    const b = this.board;
+    const cells = [];
+    for (let r = 0; r < b.rows; r++) {
+      for (let c = 0; c < b.cols; c++) {
+        const t = b.grid[r][c];
+        if (t && t.special === SP.NONE && t.color >= 0) cells.push([r, c]);
+      }
+    }
+    const placed = [];
+    for (let i = 0; i < Math.min(leftover, maxConvert) && cells.length; i++) {
+      const [r, c] = cells.splice(Math.floor(rng() * cells.length), 1)[0];
+      b.grid[r][c].special = rng() < 0.5 ? SP.ROW : SP.COL;
+      placed.push({ r, c, tile: b.grid[r][c] });
+    }
+    if (placed.length) steps.push({ type: 'convert', placed });
+    for (let round = 0; round < 8; round++) {
+      const keys = new Set();
+      for (let r = 0; r < b.rows; r++) {
+        for (let c = 0; c < b.cols; c++) {
+          const t = b.grid[r][c];
+          if (t && t.special !== SP.NONE && t.special !== SP.CROWN) keys.add(b.key(r, c));
+        }
+      }
+      if (!keys.size) break;
+      this.resolveAll(steps, [], { cells: keys, activations: [], skip: new Set() });
+    }
+    this.finished = true;
+    return { steps, bonus, converted: placed.length };
   }
 
   // Seviye kazanıldığında kalan hamleler bonus puana dönüşür.

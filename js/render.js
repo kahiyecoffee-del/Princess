@@ -670,7 +670,7 @@ export class Renderer {
     ctx.globalAlpha = v.alpha;
     ctx.translate(x + S / 2, y + S / 2);
     ctx.scale(scale, scale);
-    drawJewel(ctx, t, S, this.time, this.sprites);
+    drawJewel(ctx, v.hideSpecial ? { ...t, special: 0 } : t, S, this.time, this.sprites);
     ctx.restore();
   }
 
@@ -714,8 +714,14 @@ export class Renderer {
 
   // --- Adımları oynatma ---
   async playSteps(steps, onStepDone = () => {}) {
+    // Finale: tiles turned into specials stay hidden until their reveal
     for (const step of steps) {
-      if (step.type === 'swap') await this.animateSwap(step.a, step.b);
+      if (step.type !== 'convert') continue;
+      for (const { tile } of step.placed) { const v = this.visuals.get(tile.id); if (v) v.hideSpecial = true; }
+    }
+    for (const step of steps) {
+      if (step.type === 'convert') await this.animateConvert(step);
+      else if (step.type === 'swap') await this.animateSwap(step.a, step.b);
       else if (step.type === 'clear') await this.animateClear(step);
       else if (step.type === 'fall') await this.animateFall(step);
       else if (step.type === 'shuffle') await this.animateShuffle(step);
@@ -825,6 +831,24 @@ export class Renderer {
       if (v) p.push(this.tween(v, { x: pos.c, y: pos.r }, 500, easeInOut));
     }
     await Promise.all(p);
+  }
+
+  // Royal Finale: each leftover move becomes a shining special, one by one
+  async animateConvert(step) {
+    for (const { r, c, tile } of step.placed) {
+      const v = this.visuals.get(tile.id);
+      if (v) {
+        v.hideSpecial = false;
+        v.scale = 1.4;
+        this.tween(v, { scale: 1 }, 260, easeOutBack);
+      }
+      const [x, y] = this.cellCenter(r, c);
+      this.rings.push({ x, y, radius: this.cell * 0.9, life: 380, max: 380, rgb: '255,236,170' });
+      this.burst(r, c, tile.color, 14, 1.2);
+      this.onSound('special');
+      await this.wait(90);
+    }
+    await this.wait(250);
   }
 
   // Seviye sonu "yıldız yağmuru": kalan her hamle için tahtada parıltı
