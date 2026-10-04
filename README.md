@@ -140,7 +140,7 @@ Zorluğu değiştirdikten sonra `npm run simulate` ile kazanma oranlarını kont
 
 | Varlık | Kaynak | Lisans |
 |---|---|---|
-| Prenses görseli (`www/img/prenses*.jpg`, `arkaplan.jpg`) | Yapay zekâ ile üretildi (oyun sahibi) | Kullanılan aracın ticari kullanım şartlarına bağlı |
+| Prenses görseli (`www/img/prenses*.jpg`, `arkaplan.jpg`) | ChatGPT (OpenAI) ile üretildi (oyun sahibi) | OpenAI kullanım şartları: çıktı kullanıcıya ait, ticari kullanım serbest |
 | Prensesin sesi (`www/audio/*.mp3`) | [Kokoro-82M](https://github.com/hexgrad/kokoro) TTS, "af_heart" sesi | Apache 2.0 (ticari kullanım serbest) |
 | Yazı tipleri (Cinzel, Nunito) | Google Fonts | SIL Open Font License |
 | Mücevher ikonları, efektler | Kodla çizildi (`www/js/render.js`) | Projeye ait |
