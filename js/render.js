@@ -217,7 +217,8 @@ function drawGem(ctx, color, size) {
 }
 
 export class Renderer {
-  constructor(canvas, { onSwap, onSound }) {
+  constructor(canvas, { onSwap, onSound, onHint }) {
+    this.onHint = onHint;
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.onSwap = onSwap;
@@ -336,7 +337,7 @@ export class Renderer {
     // 6 saniye hareketsizlikte ipucu göster
     if (this.engine && !this.busy && !this.hint && now - this.lastInput > 6000 && !this.engine.finished) {
       const m = this.engine.board.listMoves(1)[0];
-      if (m) this.hint = m;
+      if (m) { this.hint = m; this.onHint?.(); }
     }
   }
 

@@ -11,8 +11,9 @@ import { audioContext } from './audio.js';
 
 export const VOICE_LINES = [
   'great', 'amazing', 'fantastic', 'spectacular', 'magnificent', 'wonderful', 'brilliant', 'sweet',
-  'congratulations', 'you-did-it', 'well-done', 'keep-going', 'dont-give-up', 'lets-shine', 'breathe',
+  'congratulations', 'you-did-it', 'well-done', 'keep-going', 'dont-give-up', 'lets-shine',
   'ooh-nice', 'so-good', 'hehe', 'my-hero', 'smile', 'wow', 'welcome', 'tickles', 'hi', 'almost',
+  'psst', 'giggle1', 'giggle2', 'giggle3', 'yay',
 ];
 
 const voice = new Audio();
@@ -55,6 +56,14 @@ export function setTrack(name) {
 export function holdMusic(hold) {
   musicHeld = hold;
   if (hold) music.pause(); else playMusic();
+}
+
+// A short giggle, at most every 20 seconds so it stays charming.
+let lastGiggle = 0;
+export function giggle() {
+  if (Date.now() - lastGiggle < 20000 || !voice.paused) return;
+  lastGiggle = Date.now();
+  say(['giggle1', 'giggle2', 'giggle3'][Math.floor(Math.random() * 3)]);
 }
 
 export function say(key) {

@@ -7,11 +7,14 @@ const reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-re
 const rand = (a, b) => a + Math.random() * (b - a);
 
 export class Princess {
-  constructor(host, { onTap } = {}) {
+  constructor(host, { onTap, onGiggle, framed = true } = {}) {
     this.host = host;
     this.onTap = onTap;
+    this.onGiggle = onGiggle;
     host.classList.add('princess');
+    if (!framed) host.classList.add('pr-unframed');
     host.innerHTML = `
+      <div class="pr-aura"></div>
       <div class="pr-frame-box">
         <div class="pr-sway"><div class="pr-body">
           <img class="pr-img" src="${FRAMES.open}" alt="The Sky Princess" draggable="false">
@@ -20,6 +23,7 @@ export class Princess {
         </div></div>
         <div class="pr-shine"></div>
       </div>
+      <div class="pr-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="pr-fx" aria-hidden="true"></div>`;
     this.body = host.querySelector('.pr-sway');
     this.fx = host.querySelector('.pr-fx');
@@ -59,11 +63,11 @@ export class Princess {
     return new Promise((r) => setTimeout(() => { this.body.classList.remove(cls); r(); }, ms));
   }
 
-  hearts(n = 3, spread = 1) {
+  hearts(n = 3, spread = 1, toBoard = false) {
     if (reduceMotion) return;
     for (let i = 0; i < n; i++) {
       const h = document.createElement('span');
-      h.className = 'pr-heart';
+      h.className = toBoard ? 'pr-heart pr-heart-kiss' : 'pr-heart';
       h.textContent = Math.random() < 0.75 ? '♥' : '✦';
       h.style.left = `${rand(60, 88)}%`;
       h.style.top = `${rand(34, 52)}%`;
@@ -89,22 +93,51 @@ export class Princess {
 
   // Reactions used by the game
   async react(kind) {
-    if (kind === 'cheer') {
-      this.busy = true;
-      this.play('pr-bounce', 700);
-      await this.wink(700);
-      this.busy = false;
-    } else if (kind === 'big') {
-      this.busy = true;
-      this.hearts(6, 1.4);
-      this.play('pr-twirl', 1000);
-      await this.frame('wink', 900);
-      this.busy = false;
-    } else if (kind === 'sad') {
-      this.play('pr-droop', 1400);
-      await this.frame('blink', 500);
-    } else if (kind === 'tilt') {
-      this.play('pr-tilt', 1600);
+    switch (kind) {
+      case 'nod':
+        if (!this.busy) this.play('pr-nod', 600);
+        break;
+      case 'cheer':
+        this.busy = true;
+        this.play('pr-bounce', 700);
+        await this.wink(700);
+        this.busy = false;
+        break;
+      case 'kiss':
+        this.busy = true;
+        this.play('pr-kiss', 1100);
+        this.hearts(4, 1.2, true);
+        await this.frame('wink', 900);
+        this.busy = false;
+        break;
+      case 'big':
+      case 'dance':
+        this.busy = true;
+        this.hearts(6, 1.4);
+        this.play('pr-dance', 1500);
+        await this.frame('wink', 500);
+        await new Promise((r) => setTimeout(r, 250));
+        await this.frame('blink', 140);
+        await this.frame('wink', 450);
+        this.busy = false;
+        break;
+      case 'lean':
+        this.play('pr-lean', 1800);
+        await new Promise((r) => setTimeout(r, 500));
+        await this.frame('wink', 600);
+        break;
+      case 'sad':
+        this.play('pr-droop', 1400);
+        await this.frame('blink', 500);
+        break;
+      case 'tilt':
+        this.play('pr-tilt', 1600);
+        break;
+      case 'hop':
+        this.play('pr-hop', 800);
+        break;
+      default:
+        break;
     }
   }
 
@@ -130,11 +163,13 @@ export class Princess {
     };
     schedule(() => this.blink(), 2400, 5200);
     schedule(async () => {
+      if (this.busy) return;
       const r = Math.random();
-      if (r < 0.4) await this.react('tilt');
-      else if (r < 0.75) await this.wink(550);
-      else this.hearts(2);
-    }, 9000, 16000);
+      if (r < 0.3) await this.react('tilt');
+      else if (r < 0.55) await this.wink(550);
+      else if (r < 0.7) await this.react('hop');
+      else if (r < 0.85) { this.play('pr-giggle', 900); this.hearts(2); this.onGiggle?.(); } else this.hearts(2);
+    }, 8000, 14000);
     schedule(() => this.sparkle(), 700, 1600);
   }
 }

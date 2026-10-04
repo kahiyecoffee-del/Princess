@@ -29,10 +29,7 @@
     </div>
     <div class="home-actions">
       <button class="btn btn-primary btn-big" id="btn-play">Play · Level <span id="play-level">1</span></button>
-      <div class="row-2">
-        <button class="btn btn-secondary" id="btn-map">Kingdom Map</button>
-        <button class="btn btn-recovery" id="btn-recovery">My Journey <span class="badge" id="recovery-badge"></span></button>
-      </div>
+      <button class="btn btn-secondary" id="btn-map">Kingdom Map</button>
     </div>
     <p class="footer-note">No real money, no betting, no spinning wheels. Just calm fun.</p>
   </section>
@@ -69,50 +66,6 @@
       </div>
     </div>
     <div class="board-wrap"><div class="board-frame ornate"><canvas id="board"></canvas></div></div>
-  </section>
-
-  <!-- MY JOURNEY (recovery) -->
-  <section id="screen-recovery" class="screen" hidden>
-    <div class="top-bar">
-      <button class="icon-btn" data-back aria-label="Back">←</button>
-      <h2>My Journey</h2>
-      <span></span>
-    </div>
-    <div class="recovery-body">
-      <div class="card counter-card ornate">
-        <div class="counter-days"><b id="rec-days">0</b><span>days bet-free</span></div>
-        <div class="counter-money"><b id="rec-money">0</b><span>kept in your pocket</span></div>
-      </div>
-      <div class="card message-card" id="rec-message"></div>
-      <button class="btn btn-urge" id="btn-urge">I feel an urge. Help me.</button>
-      <div class="card">
-        <h3>My badges</h3>
-        <div class="milestones" id="rec-milestones"></div>
-        <p class="small">Urges overcome: <b id="rec-urges">0</b></p>
-      </div>
-      <div class="card">
-        <h3>Settings</h3>
-        <label for="rec-date">The day I stopped betting <input type="date" id="rec-date"></label>
-        <label for="rec-spend">What I used to spend per day <input type="number" min="0" step="10" id="rec-spend" inputmode="numeric"></label>
-        <label for="rec-currency">Currency
-          <select id="rec-currency">
-            <option value="USD">US Dollar ($)</option>
-            <option value="EUR">Euro (€)</option>
-            <option value="GBP">British Pound (£)</option>
-            <option value="TRY">Turkish Lira (₺)</option>
-          </select>
-        </label>
-        <div class="row">
-          <button class="btn btn-secondary" id="rec-save">Save</button>
-          <button class="btn btn-ghost" id="rec-reset">I slipped. Restart my counter.</button>
-        </div>
-      </div>
-      <div class="card help-card">
-        <h3>You are not alone</h3>
-        <div id="rec-helplines"></div>
-        <p class="small">This app is a support tool. It does not replace professional treatment.</p>
-      </div>
-    </div>
   </section>
 
   <!-- MODAL -->
