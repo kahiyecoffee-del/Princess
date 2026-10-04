@@ -85,6 +85,11 @@ Kodda her değişiklikte derleme kendiliğinden de çalışır ve sürüm numara
 `node tools/make-assets.mjs` (ikon, açılış ekranı, mağaza görselleri) ve `npm start` açıkken
 `node tools/store-screenshots.mjs` (ekran görüntüleri). İkisi de `playwright` paketini ister.
 
+## Web sürümü
+
+`master`'a her gönderimde oyun otomatik olarak https://kahiyecoffee-del.github.io/Princess/ adresinde güncellenir
+(`.github/workflows/pages.yml`).
+
 ## Bilgisayarla Android'e paketleme
 
 Gerekenler: Node 18+, Android Studio (JDK 17 ile birlikte gelir).
@@ -142,6 +147,8 @@ Zorluğu değiştirdikten sonra `npm run simulate` ile kazanma oranlarını kont
 |---|---|---|
 | Prenses görseli (`www/img/prenses*.jpg`, `arkaplan.jpg`) | ChatGPT (OpenAI) ile üretildi (oyun sahibi) | OpenAI kullanım şartları: çıktı kullanıcıya ait, ticari kullanım serbest |
 | Prensesin sesi (`www/audio/*.mp3`) | [Kokoro-82M](https://github.com/hexgrad/kokoro) TTS, "af_heart" sesi | Apache 2.0 (ticari kullanım serbest) |
+| Arka plan müziği (`www/audio/music-*.mp3`) | `tools/compose_music.py` ile kodla bestelendi | Projeye ait |
+| Göz kırpma kareleri (`prenses-blink/wink.jpg`) | `tools/make_frames.py` ile portreden üretildi | Projeye ait |
 | Yazı tipleri (Cinzel, Nunito) | Google Fonts | SIL Open Font License |
 | Mücevher ikonları, efektler | Kodla çizildi (`www/js/render.js`) | Projeye ait |
 

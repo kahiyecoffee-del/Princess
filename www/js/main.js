@@ -6,7 +6,8 @@ import { MAX_LIVES, refresh, loseLife, addLife, msToNext, formatMs } from './liv
 import { Capacitor, registerPlugin } from '../vendor/capacitor-core.js';
 import { initAds, showInterstitial, showRewarded, AD_CONFIG } from './ads.js';
 import { play as sfx, setSoundEnabled } from './audio.js';
-import { say, preloadVoices } from './voice.js';
+import { say, setTrack, holdMusic, setVoiceEnabled, setMusicEnabled, whenUnlocked } from './voice.js';
+import { Princess } from './princess.js';
 import {
   sortedHelplines, MILESTONES, daysSince, moneySaved, dailyMessage, todayStr, milestoneReached, guessCurrency,
 } from './recovery.js';
@@ -20,6 +21,8 @@ const BREAK_REMINDER_SECONDS = 30 * 60;
 const $ = (s) => document.querySelector(s);
 const state = load();
 setSoundEnabled(state.sound);
+setMusicEnabled(state.music !== false);
+setVoiceEnabled(state.voice !== false);
 
 let engine = null;
 let currentLevel = 1;
@@ -28,13 +31,31 @@ let sessionPlaySeconds = 0;
 let nextBreakAt = BREAK_REMINDER_SECONDS;
 
 const renderer = new Renderer($('#board'), { onSwap: handleSwap, onSound: (n, k) => sfx(n, k) });
+const homePrincess = new Princess($('#princess-home'), { onTap: () => say('tickles') });
+const stagePrincess = new Princess($('#princess-stage'), { onTap: () => say('tickles') });
+
+// Short vibration for tactile feedback (Android); silently ignored elsewhere.
+function haptic(ms = 12) {
+  if (state.haptics !== false && navigator.vibrate) try { navigator.vibrate(ms); } catch { /* not allowed */ }
+}
+
+// Ads have their own sound, so the music pauses while one is on screen.
+async function withAd(fn) {
+  holdMusic(true);
+  try { return await fn(); } finally { holdMusic(false); }
+}
 
 // ---------- Screens ----------
 const screens = ['home', 'map', 'game', 'recovery'];
 let currentScreen = 'home';
 function show(name) {
-  for (const s of screens) $(`#screen-${s}`).hidden = s !== name;
+  for (const s of screens) {
+    const el = $(`#screen-${s}`);
+    el.hidden = s !== name;
+    if (s === name) { el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
+  }
   currentScreen = name;
+  setTrack(name === 'game' ? 'game' : 'menu');
   if (name === 'home') renderHome();
   if (name === 'map') renderMap();
   if (name === 'recovery') renderRecovery();
@@ -110,7 +131,7 @@ async function noLivesFlow() {
   });
   clearInterval(iv);
   if (choice === 'ad') {
-    const ok = await showRewarded();
+    const ok = await withAd(showRewarded);
     if (ok) {
       addLife(state.lives, Date.now(), 1);
       save(state);
@@ -128,18 +149,35 @@ function renderHome() {
   $('#play-level').textContent = Math.min(state.maxLevel, LEVEL_COUNT);
   const days = daysSince(state.recovery.quitDate);
   $('#recovery-badge').textContent = state.recovery.quitDate ? `Day ${days}` : '';
-  $('#btn-sound').textContent = state.sound ? '🔊' : '🔇';
   updateLivesUI();
 }
 
 $('#btn-play').addEventListener('click', () => startLevel(Math.min(state.maxLevel, LEVEL_COUNT)));
 $('#btn-map').addEventListener('click', () => show('map'));
 $('#btn-recovery').addEventListener('click', () => show('recovery'));
-$('#btn-sound').addEventListener('click', () => {
-  state.sound = !state.sound;
-  setSoundEnabled(state.sound);
-  save(state);
-  renderHome();
+// ---------- Settings ----------
+const SETTINGS = [
+  ['music', 'Music', (v) => setMusicEnabled(v)],
+  ['sound', 'Sound effects', (v) => setSoundEnabled(v)],
+  ['voice', "Princess's voice", (v) => setVoiceEnabled(v)],
+  ['haptics', 'Vibration', () => {}],
+];
+$('#btn-settings').addEventListener('click', () => {
+  const body = document.createElement('div');
+  body.className = 'settings';
+  for (const [key, label, apply] of SETTINGS) {
+    const row = document.createElement('label');
+    row.className = 'toggle';
+    row.innerHTML = `<span>${label}</span><input type="checkbox" id="set-${key}" ${state[key] !== false ? 'checked' : ''}><i></i>`;
+    row.querySelector('input').addEventListener('change', (e) => {
+      state[key] = e.target.checked;
+      apply(state[key]);
+      save(state);
+      if (key === 'voice' && state[key]) say('hi');
+    });
+    body.append(row);
+  }
+  modal({ title: 'Settings', body, buttons: [{ label: 'Done', value: 'ok', cls: 'btn-primary' }] });
 });
 
 // ---------- Kingdom map ----------
@@ -249,7 +287,7 @@ async function startLevel(n) {
   buildGoalsUI();
   updateHUD();
   hideSpeech();
-  setTimeout(() => cheer('lets-shine', "Let's shine together!"), 700);
+  setTimeout(() => cheer('lets-shine', "Let's shine together!", 1800, 'tilt'), 700);
   return true;
 }
 
@@ -280,12 +318,30 @@ function buildGoalsUI() {
   });
 }
 
+// The score counts up smoothly instead of jumping.
+let scoreShown = 0;
+let scoreAnim = 0;
+function rollScore(target) {
+  cancelAnimationFrame(scoreAnim);
+  const el = $('#hud-score');
+  const from = scoreShown;
+  if (target < from) { scoreShown = target; el.textContent = target.toLocaleString('en-US'); return; }
+  const t0 = performance.now();
+  const step = (t) => {
+    const k = Math.min(1, (t - t0) / 450);
+    scoreShown = Math.round(from + (target - from) * (1 - Math.pow(1 - k, 3)));
+    el.textContent = scoreShown.toLocaleString('en-US');
+    if (k < 1) scoreAnim = requestAnimationFrame(step);
+  };
+  scoreAnim = requestAnimationFrame(step);
+}
+
 function updateHUD(shownScore = engine.score) {
   const L = engine.level;
   $('#hud-level').textContent = L.number;
   $('#hud-moves').textContent = engine.movesLeft;
   $('.hud-moves').classList.toggle('low', engine.movesLeft <= 5);
-  $('#hud-score').textContent = shownScore.toLocaleString('en-US');
+  rollScore(shownScore);
   if (L.kind === 'collect') {
     document.querySelectorAll('#hud-goals .goal').forEach((el) => {
       const g = L.collect.find((x) => x.color === Number(el.dataset.color));
@@ -325,7 +381,7 @@ async function handleSwap(a, b) {
     bestCascade = Math.max(bestCascade, step.cascade);
     specials += step.created.length;
     if (step.activations.some((a) => a.special === 4)) rainbow = true;
-    if (step.cascade >= 3 || step.activations.length) castPrincess();
+    if (step.activations.length) haptic(15);
     updateHUD(step.score);
   });
   updateHUD();
@@ -336,42 +392,35 @@ async function handleSwap(a, b) {
 
 // The princess praises good moves out loud (not every move, so it stays special).
 const PRAISE = {
-  2: [['great', 'Great!'], ['sweet', 'So sweet!']],
-  3: [['amazing', 'Amazing!'], ['wonderful', 'Wonderful!']],
-  4: [['fantastic', 'Fantastic!'], ['brilliant', 'Brilliant!']],
-  5: [['spectacular', 'Spectacular!']],
+  2: [['great', 'Great!'], ['sweet', 'So sweet!'], ['ooh-nice', 'Ooh, nice one!']],
+  3: [['amazing', 'Amazing!'], ['wonderful', 'Wonderful!'], ['hehe', 'Hehe! Amazing!']],
+  4: [['fantastic', 'Fantastic!'], ['so-good', "You're so good at this!"], ['wow', 'Wow! Impressive!']],
+  5: [['spectacular', 'Spectacular!'], ['my-hero', 'My hero!']],
   6: [['magnificent', 'Magnificent!']],
 };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 function praiseMove(cascade, specials, rainbow) {
-  if (rainbow) return cheer('magnificent', 'Magnificent!');
-  if (cascade >= 2) return cheer(...pick(PRAISE[Math.min(cascade, 6)]));
-  if (specials > 0) return cheer(...pick([['wonderful', 'Wonderful!'], ['brilliant', 'Brilliant!']]));
+  if (rainbow) return cheer('magnificent', 'Magnificent!', 2000, 'big');
+  if (cascade >= 2) return cheer(...pick(PRAISE[Math.min(cascade, 6)]), 1800, cascade >= 4 ? 'big' : 'cheer');
+  if (specials > 0) return cheer(...pick([['wonderful', 'Wonderful!'], ['brilliant', 'Brilliant!'], ['smile', 'You make me smile!']]));
 }
 
 let speechTimer = 0;
-function cheer(key, text, ms = 1800) {
+function cheer(key, text, ms = 1800, reaction = 'cheer') {
   const bubble = $('#speech');
   $('#speech-text').textContent = text;
   bubble.hidden = false;
   bubble.classList.remove('pop');
   void bubble.offsetWidth;
   bubble.classList.add('pop');
-  castPrincess();
+  stagePrincess.react(reaction);
+  haptic(reaction === 'big' ? 30 : 12);
   say(key);
   clearTimeout(speechTimer);
   speechTimer = setTimeout(hideSpeech, ms);
 }
 function hideSpeech() { $('#speech').hidden = true; }
 
-function castPrincess() {
-  const el = $('#princess-small');
-  el.classList.remove('cast');
-  void el.offsetWidth;
-  el.classList.add('cast');
-  clearTimeout(castPrincess.t);
-  castPrincess.t = setTimeout(() => el.classList.remove('cast'), 750);
-}
 
 async function endOfMoves() {
   if (engine.goalsMet()) return winFlow();
@@ -379,6 +428,7 @@ async function endOfMoves() {
   if (continuesUsed < MAX_CONTINUES) {
     sfx('lose');
     const pct = Math.round(engine.progress() * 100);
+    if (pct >= 75) say('almost');
     const choice = await modal({
       title: 'Out of moves!',
       body: `<p>You reached <b>${pct}%</b> of your goal.${pct >= 75 ? ' So close!' : ''}</p>`,
@@ -388,7 +438,7 @@ async function endOfMoves() {
       ],
     });
     if (choice === 'ad') {
-      const ok = await showRewarded();
+      const ok = await withAd(showRewarded);
       if (ok) {
         continuesUsed++;
         engine.addMoves(CONTINUE_MOVES);
@@ -410,6 +460,7 @@ async function failFlow() {
   updateLivesUI();
   sfx('lose');
   say('dont-give-up');
+  stagePrincess.react('sad');
   const lives = state.lives.lives;
   const choice = await modal({
     title: 'Level failed',
@@ -426,7 +477,7 @@ async function winFlow() {
   renderer.busy = true;
   renderer.bigText('Level Complete!');
   sfx('win');
-  cheer('congratulations', 'Congratulations!', 2400);
+  cheer('congratulations', 'Congratulations!', 2400, 'big');
   const leftover = engine.movesLeft;
   await renderer.celebrate(leftover);
   const bonus = engine.finishBonus();
@@ -457,7 +508,7 @@ async function winFlow() {
   if (state.levelsSinceAd >= AD_CONFIG.INTERSTITIAL_EVERY_N_LEVELS) {
     state.levelsSinceAd = 0;
     save(state);
-    await showInterstitial();
+    await withAd(showInterstitial);
   }
   if (choice !== 'next' || !(await startLevel(n + 1))) show('home');
 }
@@ -600,7 +651,15 @@ $('#btn-urge').addEventListener('click', async () => {
     stars = Array.from({ length: Math.round((innerWidth * innerHeight) / 4000) }, () => ({
       x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 1.6 + 0.3,
       p: Math.random() * Math.PI * 2, s: 0.5 + Math.random() * 2,
-    }));
+    }));    // Golden dust drifting slowly upward
+    motes = Array.from({ length: Math.round((innerWidth * innerHeight) / 18000) }, () => newMote(true));
+  }
+  let motes = [];
+  function newMote(anywhere) {
+    return {
+      x: Math.random() * innerWidth, y: anywhere ? Math.random() * innerHeight : innerHeight + 10,
+      r: 0.8 + Math.random() * 1.8, vy: 0.15 + Math.random() * 0.35, ph: Math.random() * 6.28, a: 0.25 + Math.random() * 0.5,
+    };
   }
   resize();
   addEventListener('resize', resize);
@@ -611,6 +670,19 @@ $('#btn-urge').addEventListener('click', async () => {
       ctx.fillStyle = `rgba(230,236,255,${a})`;
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < motes.length; i++) {
+      const m = motes[i];
+      m.y -= m.vy;
+      m.x += Math.sin(t / 1400 + m.ph) * 0.25;
+      if (m.y < -10) motes[i] = newMote(false);
+      const g = ctx.createRadialGradient(m.x, m.y, 0, m.x, m.y, m.r * 3);
+      g.addColorStop(0, `rgba(255,226,150,${m.a})`);
+      g.addColorStop(1, 'rgba(255,226,150,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r * 3, 0, Math.PI * 2);
       ctx.fill();
     }
     if (!shooting && Math.random() < 0.004) {
@@ -648,7 +720,8 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) save(
 
 show('home');
 initAds();
-preloadVoices();
+// Greet the player on the first tap (browsers only allow sound after a tap)
+whenUnlocked(() => { if (currentScreen === 'home') { say(state.maxLevel > 1 ? 'welcome' : 'hi'); homePrincess.react('cheer'); } });
 
 // For tests and debugging
 window.__game = { state, get engine() { return engine; }, renderer, startLevel };

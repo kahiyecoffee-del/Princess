@@ -1,0 +1,24 @@
+# Publishes the playable web version (www/) to GitHub Pages on every master update:
+# https://kahiyecoffee-del.github.io/Princess/
+name: Web sürümü (GitHub Pages)
+
+on:
+  push:
+    branches: [master]
+    paths: ['www/**', '.github/workflows/pages.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./www
+          publish_branch: gh-pages
+          enable_jekyll: false

@@ -20,10 +20,10 @@
       <div class="lives-pill" data-lives>
         <span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer">Full</span>
       </div>
-      <button class="icon-btn" id="btn-sound" aria-label="Sound">🔊</button>
+      <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
     </div>
     <div class="home-hero">
-      <div class="portrait breathe"><img src="img/prenses.jpg" alt="The Sky Princess" width="900" height="900"></div>
+      <div class="princess-home" id="princess-home"></div>
       <h1 class="logo"><span class="logo-small">The</span><span>Sky Princess</span></h1>
       <p class="tagline">Match the stars, light up the kingdom</p>
     </div>
@@ -57,9 +57,7 @@
       <div class="hud-moves"><b id="hud-moves">25</b><small>moves</small></div>
     </div>
     <div class="stage">
-      <div class="stage-portrait breathe" id="princess-small">
-        <img src="img/prenses.jpg" alt="" width="900" height="900">
-      </div>
+      <div class="princess-stage" id="princess-stage"></div>
       <div class="stage-side">
         <div class="speech" id="speech" hidden><span id="speech-text">Amazing!</span></div>
         <div class="hud-score">
@@ -70,7 +68,7 @@
         </div>
       </div>
     </div>
-    <div class="board-wrap"><canvas id="board"></canvas></div>
+    <div class="board-wrap"><div class="board-frame ornate"><canvas id="board"></canvas></div></div>
   </section>
 
   <!-- MY JOURNEY (recovery) -->
@@ -81,7 +79,7 @@
       <span></span>
     </div>
     <div class="recovery-body">
-      <div class="card counter-card">
+      <div class="card counter-card ornate">
         <div class="counter-days"><b id="rec-days">0</b><span>days bet-free</span></div>
         <div class="counter-money"><b id="rec-money">0</b><span>kept in your pocket</span></div>
       </div>
@@ -119,7 +117,7 @@
 
   <!-- MODAL -->
   <div class="modal-backdrop" id="modal" hidden>
-    <div class="modal">
+    <div class="modal ornate">
       <div class="modal-title" id="modal-title"></div>
       <div class="modal-body" id="modal-body"></div>
       <div class="modal-buttons" id="modal-buttons"></div>
