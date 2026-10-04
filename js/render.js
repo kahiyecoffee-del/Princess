@@ -1,5 +1,6 @@
 // Canvas drawing, animations, particle effects and touch input.
 import { SP } from './board.js';
+import { t } from './i18n.js';
 
 // Royal jewel set: faceted gemstones in gold settings.
 export const TILE_COLORS = [
@@ -11,7 +12,7 @@ export const TILE_COLORS = [
   { name: 'Moonstone', main: '#c9d4ff', light: '#ffffff', dark: '#5a67a8' },
 ];
 
-const COMBO_WORDS = ['', '', 'Great!', 'Amazing!', 'Fantastic!', 'Spectacular!', 'Magnificent!', 'Legendary!'];
+const comboWord = (n) => t(`combo${Math.min(n, 7)}`);
 
 const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
@@ -718,7 +719,7 @@ export class Renderer {
       else if (step.type === 'clear') await this.animateClear(step);
       else if (step.type === 'fall') await this.animateFall(step);
       else if (step.type === 'shuffle') await this.animateShuffle(step);
-      else if (step.type === 'rebuild') { this.bigText('Shuffling...'); this.rebuild(true); await this.wait(700); }
+      else if (step.type === 'rebuild') { this.bigText(t('shuffling')); this.rebuild(true); await this.wait(700); }
       onStepDone(step);
     }
   }
@@ -785,7 +786,7 @@ export class Renderer {
     const [tx, ty] = this.cellCenter(sx / n, sy / n);
     this.floatText(`+${step.points}`, tx, ty, Math.max(16, S * 0.4), '#ffd77a', 900);
     if (step.cascade >= 2) {
-      this.bigText(COMBO_WORDS[Math.min(step.cascade, COMBO_WORDS.length - 1)]);
+      this.bigText(comboWord(step.cascade));
       this.onSound('combo', step.cascade);
     }
     await this.wait(90);
@@ -817,7 +818,7 @@ export class Renderer {
   }
 
   async animateShuffle(step) {
-    this.bigText('Shuffling...');
+    this.bigText(t('shuffling'));
     const p = [];
     for (const pos of step.positions) {
       const v = this.visuals.get(pos.id);

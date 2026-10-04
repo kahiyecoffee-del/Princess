@@ -19,7 +19,7 @@
     <div class="home-hero">
       <div class="princess-home" id="princess-home"></div>
       <h1 class="logo"><span class="logo-small">The</span><span>Sky Princess</span></h1>
-      <p class="tap-hint">Tap to begin</p>
+      <p class="tap-hint" data-i18n="tapToBegin">Tap to begin</p>
     </div>
   </section>
 
@@ -28,7 +28,7 @@
     <div class="top-bar">
       <div class="lives-pill" data-lives><span class="heart">❤</span><b class="lives-count">5</b><span class="lives-timer"></span></div>
       <button class="coin-pill" id="btn-coins" aria-label="Coins, open shop"><span class="coin"></span><b id="coin-count">0</b><span class="plus">+</span></button>
-      <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
+      <button class="icon-btn" id="btn-settings" aria-label="Settings" data-i18n-aria="settings">⚙</button>
     </div>
     <button class="festival-banner" id="festival-banner" hidden>
       <span class="fest-star">✦</span>
@@ -44,17 +44,17 @@
       <div class="map-path" id="level-grid"></div>
     </div>
     <div class="map-dock">
-      <button class="dock-btn" id="btn-daily" aria-label="Daily gift">
+      <button class="dock-btn" id="btn-daily" aria-label="Daily gift" data-i18n-aria="dailyTitle">
         <svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="giftG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9cc0"/><stop offset="1" stop-color="#b02e5c"/></linearGradient><linearGradient id="ribG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0c2"/><stop offset="1" stop-color="#c58a26"/></linearGradient></defs>
           <rect x="6" y="16" width="28" height="20" rx="3" fill="url(#giftG)"/><rect x="4" y="11" width="32" height="8" rx="2" fill="url(#giftG)" stroke="#ffd0e0" stroke-width=".8"/>
           <rect x="17.5" y="11" width="5" height="25" fill="url(#ribG)"/><path d="M20 11c-4-7-11-6-9-1 1 2 6 2 9 1zm0 0c4-7 11-6 9-1-1 2-6 2-9 1z" fill="url(#ribG)"/></svg>
-        <span>Daily</span><i class="dot" id="daily-dot" hidden></i>
+        <span data-i18n="daily">Daily</span><i class="dot" id="daily-dot" hidden></i>
       </button>
-      <button class="dock-btn" id="btn-shop" aria-label="Shop">
+      <button class="dock-btn" id="btn-shop" aria-label="Shop" data-i18n-aria="shopTitle">
         <svg viewBox="0 0 40 40" aria-hidden="true"><defs><linearGradient id="chestG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f97ff"/><stop offset="1" stop-color="#22359a"/></linearGradient></defs>
           <path d="M5 18a15 9 0 0 1 30 0v3H5z" fill="url(#chestG)" stroke="url(#ribG)" stroke-width="2"/><rect x="5" y="21" width="30" height="14" rx="2" fill="url(#chestG)" stroke="url(#ribG)" stroke-width="2"/>
           <rect x="17" y="18" width="6" height="8" rx="1.5" fill="url(#ribG)"/><circle cx="20" cy="22" r="1.2" fill="#22359a"/><path d="M12 13l1 2 2 .5-2 .5-1 2-1-2-2-.5 2-.5zM29 10l.8 1.6 1.6.4-1.6.4-.8 1.6-.8-1.6-1.6-.4 1.6-.4z" fill="#fff6d8"/></svg>
-        <span>Shop</span>
+        <span data-i18n="shop">Shop</span>
       </button>
     </div>
   </section>
@@ -62,15 +62,15 @@
   <!-- GAME -->
   <section id="screen-game" class="screen" hidden>
     <div class="hud">
-      <button class="icon-btn" id="btn-quit" aria-label="Leave level">✕</button>
-      <div class="hud-level">Level <b id="hud-level">1</b></div>
-      <div class="hud-moves"><b id="hud-moves">25</b><small>moves</small></div>
+      <button class="icon-btn" id="btn-quit" aria-label="Leave level" data-i18n-aria="leaveTitle">✕</button>
+      <div class="hud-level"><span data-i18n="level">Level</span> <b id="hud-level">1</b></div>
+      <div class="hud-moves"><b id="hud-moves">25</b><small data-i18n="moves">moves</small></div>
     </div>
     <div class="stage">
       <div class="princess-stage" id="princess-stage"></div>
       <div class="stage-side">
         <div class="stage-tools">
-          <button class="booster" id="btn-wand" aria-label="Royal Wand"><canvas width="96" height="96"></canvas><b class="count" id="wand-count">0</b></button>
+          <button class="booster" id="btn-wand" aria-label="Royal Wand" data-i18n-aria="item_wand"><canvas width="96" height="96"></canvas><b class="count" id="wand-count">0</b></button>
         </div>
         <div class="speech" id="speech" hidden><span id="speech-text">Amazing!</span></div>
         <div class="hud-score">
@@ -91,7 +91,7 @@
       <div class="princess-story" id="princess-story"></div>
       <p class="story-text" id="story-text"></p>
       <div class="story-reward" id="story-reward"></div>
-      <button class="btn btn-primary" id="story-next">Continue</button>
+      <button class="btn btn-primary" id="story-next" data-i18n="continue">Continue</button>
     </div>
   </div>
 
@@ -109,9 +109,9 @@
   <!-- Placeholder ad for browser testing -->
   <div class="mock-ad" id="mock-ad" hidden>
     <div class="mock-ad-kind"></div>
-    <div class="mock-ad-box">AD SPACE<br><small>On Android, an AdMob ad appears here</small></div>
+    <div class="mock-ad-box"><span data-i18n="adSpace">AD SPACE</span><br><small data-i18n="adHere">On Android, an AdMob ad appears here</small></div>
     <div class="mock-ad-timer">3</div>
-    <button class="btn btn-secondary mock-ad-close" hidden>Close ✕</button>
+    <button class="btn btn-secondary mock-ad-close" hidden data-i18n="close">Close</button>
   </div>
 
   <script src="js/main.js" type="module"></script>

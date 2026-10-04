@@ -1,5 +1,5 @@
 import { Engine } from './engine.js';
-import { getLevel, LEVEL_COUNT, describeGoal } from './levels.js';
+import { getLevel, LEVEL_COUNT } from './levels.js';
 import { Renderer, drawGem, drawJewel } from './render.js';
 import { SP } from './board.js';
 import {
@@ -20,6 +20,7 @@ import { say, giggle, setTrack, holdMusic, setVoiceEnabled, setMusicEnabled, set
 import { Princess } from './princess.js';
 import { askPermission, scheduleAll } from './notifications.js';
 import { COIN_PACKS, NO_ADS, initStore, priceOf, buy, ownsNoAds, restore, isTestStore } from './purchases.js';
+import { t, fmt, setLang, getLang, detectLang, applyStatic, LANG_NAMES } from './i18n.js';
 
 // How many times per attempt the player can watch an ad for +3 moves.
 const MAX_CONTINUES = 2;
@@ -31,6 +32,8 @@ const $ = (s) => document.querySelector(s);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const state = initEconomy(load());
 ensurePlayerId(state);
+setLang(state.lang || detectLang());
+applyStatic();
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music !== false);
 setVoiceEnabled(state.voice !== false);
@@ -54,7 +57,7 @@ function princessHint() {
   if (currentScreen !== 'game') return;
   if (Date.now() - lastHintTalk > 45000) {
     lastHintTalk = Date.now();
-    cheer('psst', 'Psst! Look here, darling.', 2200, 'lean');
+    cheer('psst', t('psst'), 2200, 'lean');
   } else {
     stagePrincess.react('lean');
   }
@@ -144,13 +147,13 @@ function updateLivesUI() {
   const ms = msToNext(state.lives, now);
   document.querySelectorAll('[data-lives]').forEach((el) => {
     el.querySelector('.lives-count').textContent = state.lives.lives;
-    el.querySelector('.lives-timer').textContent = state.lives.lives >= MAX_LIVES ? 'Full' : formatMs(ms);
+    el.querySelector('.lives-timer').textContent = state.lives.lives >= MAX_LIVES ? t('full') : formatMs(ms);
   });
 }
 // ---------- Coins & items ----------
 const COIN = '<span class="coin"></span>';
 function updateCoinsUI() {
-  $('#coin-count').textContent = state.coins.toLocaleString('en-US');
+  $('#coin-count').textContent = fmt(state.coins);
   $('#wand-count').textContent = state.items.wand || '+';
   $('#btn-wand').classList.toggle('empty', !state.items.wand);
   $('#daily-dot').hidden = !dailyStatus(state).available;
@@ -212,7 +215,7 @@ async function openShop() {
   const body = document.createElement('div');
   body.className = 'shop';
   const render = () => {
-    body.innerHTML = `<div class="shop-balance">${COIN}<b>${state.coins.toLocaleString('en-US')}</b></div>`;
+    body.innerHTML = `<div class="shop-balance">${COIN}<b>${fmt(state.coins)}</b></div>`;
     const grid = document.createElement('div');
     grid.className = 'shop-grid';
     for (const id of ITEM_ORDER) {
@@ -220,7 +223,7 @@ async function openShop() {
       const card = document.createElement('div');
       card.className = 'shop-card';
       card.append(itemIcon(id, 58));
-      card.insertAdjacentHTML('beforeend', `<h4>${it.name}</h4><p>${it.desc}</p><small>Owned: <b>${state.items[id] || 0}</b></small>`);
+      card.insertAdjacentHTML('beforeend', `<h4>${t(`item_${id}`)}</h4><p>${t(`item_${id}_d`)}</p><small>${t('owned', { n: `<b>${state.items[id] || 0}</b>` })}</small>`);
       const buy = document.createElement('button');
       buy.className = 'btn btn-primary btn-buy';
       buy.innerHTML = `${COIN}${it.price}`;
@@ -237,7 +240,7 @@ async function openShop() {
     const refill = document.createElement('button');
     refill.className = 'btn btn-secondary';
     const full = state.lives.lives >= MAX_LIVES;
-    refill.innerHTML = full ? '❤ Lives are full' : `❤ Refill all lives · ${COIN}${LIVES_REFILL_PRICE}`;
+    refill.innerHTML = full ? t('livesFull') : t('refillLives', { price: `${COIN}${LIVES_REFILL_PRICE}` });
     refill.disabled = full || state.coins < LIVES_REFILL_PRICE;
     refill.addEventListener('click', () => {
       if (spend(state, LIVES_REFILL_PRICE)) { addLife(state.lives, Date.now(), MAX_LIVES); save(state); updateLivesUI(); updateCoinsUI(); sfx('win'); render(); }
@@ -245,25 +248,25 @@ async function openShop() {
     const left = adCoinsLeft(state);
     const ad = document.createElement('button');
     ad.className = 'btn btn-ad';
-    ad.innerHTML = left ? `🎬 Watch an ad · +${AD_COINS} ${COIN} <small>(${left} left today)</small>` : 'Come back tomorrow for more free coins';
+    ad.innerHTML = left ? t('watchAdCoins', { n: AD_COINS, coin: COIN, left }) : t('adTomorrow');
     ad.disabled = !left;
     ad.addEventListener('click', async () => {
-      if (await withAd(showRewarded)) { grantAdCoins(state); save(state); updateCoinsUI(); sfx('star'); render(); } else toast('The ad could not load right now.');
+      if (await withAd(showRewarded)) { grantAdCoins(state); save(state); updateCoinsUI(); sfx('star'); render(); } else toast(t('adNow'));
     });
     extra.append(refill, ad);
     body.append(extra);
 
     // Real-money section
-    const testBuy = () => { toast('Test mode: no real payment was made.'); return true; };
+    const testBuy = () => { toast(t('testMode')); return true; };
     const gold = document.createElement('div');
     gold.className = 'shop-section';
-    gold.innerHTML = `<h3>Treasure Chests</h3>${isTestStore ? '<p class="small">Web demo: purchases are simulated.</p>' : ''}`;
+    gold.innerHTML = `<h3>${t('chests')}</h3>${isTestStore ? `<p class="small">${t('webDemo')}</p>` : ''}`;
     const packs = document.createElement('div');
     packs.className = 'pack-grid';
     COIN_PACKS.forEach((p, i) => {
       const b = document.createElement('button');
       b.className = `pack${p.tag === 'Best value' ? ' best' : ''}`;
-      b.innerHTML = `${p.tag ? `<em>${p.tag}</em>` : ''}<span class="pack-chest size${i}"></span><b>${COIN}${p.coins.toLocaleString('en-US')}</b><span class="pack-price">${priceOf(p)}</span>`;
+      b.innerHTML = `${p.tag ? `<em>${p.tag === 'Best value' ? t('bestValue') : p.tag}</em>` : ''}<span class="pack-chest size${i}"></span><b>${COIN}${fmt(p.coins)}</b><span class="pack-price">${priceOf(p)}</span>`;
       b.addEventListener('click', async () => {
         if (await buy(p.id, { consumable: true }, testBuy)) {
           addCoins(p.coins); sfx('win'); say('yay'); render();
@@ -274,22 +277,22 @@ async function openShop() {
     gold.append(packs);
     const noAds = document.createElement('button');
     noAds.className = 'btn no-ads';
-    noAds.innerHTML = state.noAds ? '✓ No ads: thank you, darling! 💖' : `🚫 Remove ads forever · ${priceOf(NO_ADS)}<small>Rewarded ads stay optional</small>`;
+    noAds.innerHTML = state.noAds ? t('noAdsOwned') : `${t('removeAds', { price: priceOf(NO_ADS) })}<small>${t('rewardedOptional')}</small>`;
     noAds.disabled = !!state.noAds;
     noAds.addEventListener('click', async () => {
       if (await buy(NO_ADS.id, { consumable: false }, testBuy)) { state.noAds = true; save(state); sfx('win'); say('my-hero'); render(); }
     });
     const restoreBtn = document.createElement('button');
     restoreBtn.className = 'link-btn';
-    restoreBtn.textContent = 'Restore purchases';
+    restoreBtn.textContent = t('restore');
     restoreBtn.addEventListener('click', async () => {
-      if (await restore()) { state.noAds = true; save(state); toast('No-ads restored ✓'); render(); } else toast('Nothing to restore.');
+      if (await restore()) { state.noAds = true; save(state); toast(t('restored')); render(); } else toast(t('nothingRestore'));
     });
     gold.append(noAds, restoreBtn);
     body.append(gold);
   };
   render();
-  await modal({ title: 'Royal Shop', body, buttons: [{ label: 'Close', value: 'ok', cls: 'btn-ghost' }] });
+  await modal({ title: t('shopTitle'), body, buttons: [{ label: t('close'), value: 'ok', cls: 'btn-ghost' }] });
   updateCoinsUI();
 }
 $('#btn-shop').addEventListener('click', openShop);
@@ -304,14 +307,14 @@ async function openDaily(auto = false) {
   const cal = DAILY.map((d, i) => {
     const day = i + 1;
     const cls = day < st.day || (!st.available && day === st.day) ? 'got' : day === st.day ? 'today' : '';
-    return `<div class="daily-day ${cls}"><small>Day ${day}</small>${COIN}<b>${d.coins}</b>${d.item ? `<em>+ ${ITEMS[d.item].name}</em>` : ''}</div>`;
+    return `<div class="daily-day ${cls}"><small>${t('day', { n: day })}</small>${COIN}<b>${d.coins}</b>${d.item ? `<em>+ ${t(`item_${d.item}`)}</em>` : ''}</div>`;
   }).join('');
-  body.innerHTML = `<p>${st.available ? 'Come back every day for bigger gifts!' : 'You already opened today\'s gift. See you tomorrow, darling!'}</p><div class="daily-grid">${cal}</div>`;
+  body.innerHTML = `<p>${st.available ? t('dailyComeBack') : t('dailyAlready')}</p><div class="daily-grid">${cal}</div>`;
   const choice = await modal({
-    title: 'Daily Gift',
+    title: t('dailyTitle'),
     body,
-    buttons: st.available ? [{ label: `Claim day ${st.day} gift`, value: 'claim', cls: 'btn-primary' }, { label: 'Later', value: 'later', cls: 'btn-ghost' }]
-      : [{ label: 'OK', value: 'ok', cls: 'btn-ghost' }],
+    buttons: st.available ? [{ label: t('claimDay', { n: st.day }), value: 'claim', cls: 'btn-primary' }, { label: t('later'), value: 'later', cls: 'btn-ghost' }]
+      : [{ label: t('ok'), value: 'ok', cls: 'btn-ghost' }],
   });
   if (choice === 'claim') {
     const got = claimDaily(state);
@@ -319,7 +322,7 @@ async function openDaily(auto = false) {
     updateCoinsUI();
     sfx('win');
     say(pick(['yay', 'hehe']));
-    toast(`+${got.reward.coins} coins${got.reward.item ? ` and a ${ITEMS[got.reward.item].name}` : ''}!`);
+    toast(got.reward.item ? t('dailyGotItem', { n: got.reward.coins, item: t(`item_${got.reward.item}`) }) : t('dailyGot', { n: got.reward.coins }));
   }
 }
 $('#btn-daily').addEventListener('click', () => openDaily(false));
@@ -334,16 +337,16 @@ async function noLivesFlow() {
   const body = document.createElement('div');
   const p = document.createElement('p');
   body.append(p);
-  const tick = () => { p.innerHTML = `Next life in <b>${formatMs(msToNext(state.lives, Date.now()))}</b><br>A new life arrives every 30 minutes.`; };
+  const tick = () => { p.innerHTML = t('nextLife', { t: formatMs(msToNext(state.lives, Date.now())) }); };
   tick();
   const iv = setInterval(tick, 1000);
   const choice = await modal({
-    title: 'Out of lives 💔',
+    title: t('outOfLives'),
     body,
     buttons: [
-      { label: '🎬 Watch an ad for 1 life', value: 'ad', cls: 'btn-ad' },
-      ...(state.coins >= LIVES_REFILL_PRICE ? [{ label: `Refill all lives · ${COIN}${LIVES_REFILL_PRICE}`, value: 'buy', cls: 'btn-primary' }] : []),
-      { label: "I'll wait", value: 'wait', cls: 'btn-ghost' },
+      { label: t('adForLife'), value: 'ad', cls: 'btn-ad' },
+      ...(state.coins >= LIVES_REFILL_PRICE ? [{ label: t('refillLives', { price: `${COIN}${LIVES_REFILL_PRICE}` }), value: 'buy', cls: 'btn-primary' }] : []),
+      { label: t('wait'), value: 'wait', cls: 'btn-ghost' },
     ],
   });
   clearInterval(iv);
@@ -360,10 +363,10 @@ async function noLivesFlow() {
       addLife(state.lives, Date.now(), 1);
       save(state);
       updateLivesUI();
-      toast('+1 life ❤');
+      toast(t('plusLife'));
       return true;
     }
-    toast('The ad could not load. Please try again in a moment.');
+    toast(t('adLater'));
   }
   return false;
 }
@@ -373,19 +376,35 @@ async function noLivesFlow() {
 updateCoinsUI();
 
 const SETTINGS = [
-  ['music', 'Music', (v) => setMusicEnabled(v)],
-  ['sound', 'Sound effects', (v) => setSoundEnabled(v)],
-  ['voice', "Princess's voice", (v) => setVoiceEnabled(v)],
-  ['haptics', 'Vibration', () => {}],
-  ['notify', 'Reminders from the princess', (v) => { if (v) askPermission(); scheduleAll(state); }],
+  ['music', (v) => setMusicEnabled(v)],
+  ['sound', (v) => setSoundEnabled(v)],
+  ['voice', (v) => setVoiceEnabled(v)],
+  ['haptics', () => {}],
+  ['notify', (v) => { if (v) askPermission(); scheduleAll(state); }],
 ];
 $('#btn-settings').addEventListener('click', () => {
   const body = document.createElement('div');
   body.className = 'settings';
-  for (const [key, label, apply] of SETTINGS) {
+  // Language picker
+  const langRow = document.createElement('label');
+  langRow.className = 'toggle lang-row';
+  langRow.innerHTML = `<span>${t('language')}</span><select id="set-lang">${Object.entries(LANG_NAMES).map(([c, n]) => `<option value="${c}" ${c === getLang() ? 'selected' : ''}>${n}</option>`).join('')}</select>`;
+  langRow.querySelector('select').addEventListener('change', (e) => {
+    state.lang = e.target.value;
+    save(state);
+    setLang(state.lang);
+    applyStatic();
+    renderMap();
+    updateFestivalUI();
+    updateLivesUI();
+    $('#modal').hidden = true;
+    $('#btn-settings').click();
+  });
+  body.append(langRow);
+  for (const [key, apply] of SETTINGS) {
     const row = document.createElement('label');
     row.className = 'toggle';
-    row.innerHTML = `<span>${label}</span><input type="checkbox" id="set-${key}" ${state[key] !== false ? 'checked' : ''}><i></i>`;
+    row.innerHTML = `<span>${t(`set_${key}`)}</span><input type="checkbox" id="set-${key}" ${state[key] !== false ? 'checked' : ''}><i></i>`;
     row.querySelector('input').addEventListener('change', (e) => {
       state[key] = e.target.checked;
       apply(state[key]);
@@ -396,54 +415,53 @@ $('#btn-settings').addEventListener('click', () => {
   }
   const invite = document.createElement('div');
   invite.className = 'invite-box';
-  invite.innerHTML = `<small>Your invite code</small><b class="invite-code">${state.playerId}</b>`;
+  invite.innerHTML = `<small>${t('inviteCode')}</small><b class="invite-code">${state.playerId}</b>`;
   const shareBtn = document.createElement('button');
   shareBtn.className = 'btn btn-secondary';
-  shareBtn.innerHTML = `💌 Invite friends <small>(+${SHARE_REWARD} ${COIN} a day)</small>`;
+  shareBtn.innerHTML = t('inviteFriends', { n: SHARE_REWARD, coin: COIN });
   shareBtn.addEventListener('click', () => shareInvite());
   const codeBtn = document.createElement('button');
   codeBtn.className = 'btn btn-ghost';
-  codeBtn.textContent = state.inviteRedeemed ? `Invite code used: ${state.inviteRedeemed}` : `Enter a friend's code (+${INVITE_REWARD} coins)`;
+  codeBtn.textContent = state.inviteRedeemed ? t('codeUsed', { code: state.inviteRedeemed }) : t('enterCode', { n: INVITE_REWARD });
   codeBtn.disabled = !!state.inviteRedeemed;
   codeBtn.addEventListener('click', () => { $('#modal').hidden = true; enterInviteCode(); });
   invite.append(shareBtn, codeBtn);
   body.append(invite);
   const test = document.createElement('button');
   test.className = 'btn btn-ghost test-voice';
-  test.textContent = '▶ Test her voice';
+  test.textContent = t('testVoice');
   test.addEventListener('click', () => say(pick(['hi', 'tickles', 'amazing'])));
   body.append(test);
-  modal({ title: 'Settings', body, buttons: [{ label: 'Done', value: 'ok', cls: 'btn-primary' }] });
+  modal({ title: t('settings'), body, buttons: [{ label: t('done'), value: 'ok', cls: 'btn-primary' }] });
 });
 
 // ---------- Invites ----------
 const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.gokyuzuprensesi.oyun';
 const SharePlugin = Capacitor.isNativePlatform() ? registerPlugin('Share') : null;
 async function shareInvite() {
-  const text = `Come play The Sky Princess with me! 👑 Enter my invite code ${state.playerId} in Settings and get ${INVITE_REWARD} free coins.`;
+  const text = t('shareText', { code: state.playerId, n: INVITE_REWARD });
   let shared = false;
   try {
-    if (SharePlugin) { await SharePlugin.share({ title: 'The Sky Princess', text, url: PLAY_URL, dialogTitle: 'Invite a friend' }); shared = true; }
+    if (SharePlugin) { await SharePlugin.share({ title: 'The Sky Princess', text, url: PLAY_URL, dialogTitle: t('inviteDialog') }); shared = true; }
     else if (navigator.share) { await navigator.share({ title: 'The Sky Princess', text, url: PLAY_URL }); shared = true; }
-    else { await navigator.clipboard.writeText(`${text} ${PLAY_URL}`); toast('Invite copied! Paste it to a friend.'); shared = true; }
+    else { await navigator.clipboard.writeText(`${text} ${PLAY_URL}`); toast(t('copied')); shared = true; }
   } catch { /* cancelled */ }
-  if (shared && grantShareReward(state)) { save(state); updateCoinsUI(); toast(`+${SHARE_REWARD} coins for sharing! 💌`); }
+  if (shared && grantShareReward(state)) { save(state); updateCoinsUI(); toast(t('shareReward', { n: SHARE_REWARD })); }
 }
 async function enterInviteCode() {
   const body = document.createElement('div');
-  body.innerHTML = `<p>Enter your friend's 6-letter code to get <b>${INVITE_REWARD}</b> ${COIN}</p><input id="invite-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123" class="invite-input">`;
-  const choice = await modal({ title: 'Invite code', body, buttons: [{ label: 'Redeem', value: 'ok', cls: 'btn-primary' }, { label: 'Cancel', value: 'no', cls: 'btn-ghost' }] });
+  body.innerHTML = `<p>${t('enterCodeBody', { n: INVITE_REWARD, coin: COIN })}</p><input id="invite-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123" class="invite-input">`;
+  const choice = await modal({ title: t('inviteTitle'), body, buttons: [{ label: t('redeem'), value: 'ok', cls: 'btn-primary' }, { label: t('cancel'), value: 'no', cls: 'btn-ghost' }] });
   if (choice !== 'ok') return;
   const res = redeemInvite(state, $('#invite-input').value);
-  const msg = { ok: `Welcome! +${INVITE_REWARD} coins 💖`, own: "That's your own code, darling!", invalid: 'That code does not look right.', already: 'You already used an invite code.' }[res];
+  const msg = t(`inv_${res}`, { n: INVITE_REWARD });
   if (res === 'ok') { save(state); updateCoinsUI(); sfx('win'); say('yay'); }
   toast(msg);
 }
 
 // ---------- Kingdom map ----------
 // A winding golden road climbs from level 1 (bottom) to the castle (top).
-const CHAPTERS = ['Starlit Gate', 'Crystal Bridge', 'Moonlit Gardens', 'Sapphire Halls', 'Floating Isles',
-  'Tower of Dawn', 'Celestial Library', 'Aurora Court', 'Silver Spires', 'The Sky Throne'];
+const chapterName = (ch) => t(`ch${(ch % 10) + 1}`);
 const NODE_GAP = 92;
 function renderMap() {
   const path = $('#level-grid');
@@ -482,7 +500,7 @@ function renderMap() {
       const banner = document.createElement('div');
       banner.className = 'chapter';
       banner.style.top = `${p.y + 26}px`;
-      banner.innerHTML = `<small>Chapter ${ch + 1}</small>${CHAPTERS[ch % CHAPTERS.length]}`;
+      banner.innerHTML = `<small>${t('chapter', { n: ch + 1 })}</small>${chapterName(ch)}`;
       path.append(banner);
     }
     const L = getLevel(n);
@@ -493,7 +511,7 @@ function renderMap() {
     b.style.top = `${p.y}px`;
     const st = state.stars[n] || 0;
     b.innerHTML = `<span class="num">${locked ? '' : n}</span>${locked ? '<span class="lock"></span>' : ''}<span class="stars">${[1, 2, 3].map((i) => `<i class="${i <= st ? 'on' : ''}">★</i>`).join('')}</span>`;
-    b.setAttribute('aria-label', locked ? `Level ${n}, locked` : `Level ${n}, ${st} stars`);
+    b.setAttribute('aria-label', locked ? t('locked', { n }) : t('starsAria', { n, s: st }));
     if (!locked) b.addEventListener('click', () => startLevel(n));
     path.append(b);
   }
@@ -534,7 +552,7 @@ $('#map-scroll').addEventListener('scroll', mapParallax, { passive: true });
 const storyPrincess = new Princess($('#princess-story'), { onTap: tapLine });
 async function showStory(story) {
   const el = $('#story');
-  $('#story-chapter').textContent = `Chapter ${story.chapter} complete`;
+  $('#story-chapter').textContent = t('chapterComplete', { n: story.chapter });
   const textEl = $('#story-text');
   textEl.textContent = '';
   $('#story-reward').innerHTML = `+${CHAPTER_REWARD} ${COIN}`;
@@ -544,7 +562,7 @@ async function showStory(story) {
   storyPrincess.react('cheer');
   setTimeout(() => say(story.voice), 500);
   // Type the words in as she speaks
-  const words = story.text.split(' ');
+  const words = t(story.voice).split(' ');
   for (let i = 0; i < words.length; i++) {
     textEl.textContent += (i ? ' ' : '') + words[i];
     await new Promise((r) => setTimeout(r, 190));
@@ -563,7 +581,7 @@ let storyMode = false;
 // ---------- Star Festival ----------
 function fmtLeft(ms) {
   const h = Math.max(0, Math.floor(ms / 3600000));
-  return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}h ${Math.floor((ms % 3600000) / 60000)}m`;
+  return h >= 24 ? t('dh', { d: Math.floor(h / 24), h: h % 24 }) : t('hm', { h, m: Math.floor((ms % 3600000) / 60000) });
 }
 function updateFestivalUI() {
   const f = festivalState(state);
@@ -572,18 +590,18 @@ function updateFestivalUI() {
   banner.classList.toggle('live', f.active);
   const goal = FESTIVAL_MILESTONES[FESTIVAL_MILESTONES.length - 1].shards;
   if (f.active) {
-    $('#fest-title').textContent = 'Star Festival · 2× coins';
-    $('#fest-sub').textContent = `${f.shards}/${goal} star shards · ends in ${fmtLeft(f.endsAt - Date.now())}`;
+    $('#fest-title').textContent = t('festLive');
+    $('#fest-sub').textContent = t('festSubLive', { s: f.shards, g: goal, t: fmtLeft(f.endsAt - Date.now()) });
   } else {
-    $('#fest-title').textContent = 'Star Festival';
-    $('#fest-sub').textContent = `Starts in ${fmtLeft(f.startsAt - Date.now())} · every weekend`;
+    $('#fest-title').textContent = t('festival');
+    $('#fest-sub').textContent = t('festSubSoon', { t: fmtLeft(f.startsAt - Date.now()) });
   }
   $('#fest-fill').style.width = `${Math.min(100, (f.shards / goal) * 100)}%`;
   // Announce the festival once per weekend
   if (f.active && state.festivalAnnounced !== f.key) {
     state.festivalAnnounced = f.key;
     save(state);
-    setTimeout(() => { say('festival'); toast("✦ The Star Festival is live! Double coins all weekend."); }, 1200);
+    setTimeout(() => { say('festival'); toast(t('festToast')); }, 1200);
   }
   const claimable = FESTIVAL_MILESTONES.some((m, i) => f.shards >= m.shards && !f.claimed.includes(i));
   banner.classList.toggle('claim', claimable);
@@ -594,16 +612,16 @@ $('#festival-banner').addEventListener('click', async () => {
   body.className = 'festival';
   const render = () => {
     const st = festivalState(state);
-    body.innerHTML = `<p>${st.active ? 'Every star you earn this weekend becomes a <b>star shard</b>, and all level coins are doubled!' : 'Every weekend the kingdom celebrates. Earn star shards for royal prizes and double coins!'}</p>`;
+    body.innerHTML = `<p>${st.active ? t('festBodyLive') : t('festBodySoon')}</p>`;
     FESTIVAL_MILESTONES.forEach((m, i) => {
       const row = document.createElement('div');
       const done = st.claimed.includes(i);
       const ready = st.shards >= m.shards && !done;
       row.className = `fest-row${done ? ' done' : ''}${ready ? ' ready' : ''}`;
-      row.innerHTML = `<span class="shard">✦</span><b>${m.shards}</b><span class="fest-prize">${m.coins} ${COIN}${m.item ? ` + ${ITEMS[m.item].name}` : ''}</span>`;
+      row.innerHTML = `<span class="shard">✦</span><b>${m.shards}</b><span class="fest-prize">${m.coins} ${COIN}${m.item ? ` + ${t(`item_${m.item}`)}` : ''}</span>`;
       const btn = document.createElement('button');
       btn.className = 'btn btn-primary';
-      btn.textContent = done ? '✓' : 'Claim';
+      btn.textContent = done ? '✓' : t('claim');
       btn.disabled = !ready;
       btn.addEventListener('click', () => { if (claimFestival(state, i)) { save(state); updateCoinsUI(); sfx('win'); render(); } });
       row.append(btn);
@@ -611,7 +629,7 @@ $('#festival-banner').addEventListener('click', async () => {
     });
   };
   render();
-  await modal({ title: f.active ? 'Star Festival' : 'Star Festival', body, buttons: [{ label: 'Close', value: 'ok', cls: 'btn-ghost' }] });
+  await modal({ title: t('festival'), body, buttons: [{ label: t('close'), value: 'ok', cls: 'btn-ghost' }] });
   updateFestivalUI();
 });
 
@@ -625,7 +643,7 @@ async function startLevel(n) {
   const level = getLevel(n);
   const intro = document.createElement('div');
   const goal = document.createElement('p');
-  goal.textContent = describeGoal(level);
+  goal.textContent = level.kind === 'score' ? t('goal_score', { n: fmt(level.targetScore) }) : t(`goal_${level.kind}`);
   intro.append(goal);
   if (level.kind === 'collect') {
     const row = document.createElement('div');
@@ -639,13 +657,13 @@ async function startLevel(n) {
     intro.append(row);
   }
   const info = document.createElement('p');
-  info.innerHTML = `<b>${level.moves}</b> moves${level.hard ? '<br>⚡ <b>Hard level!</b>' : ''}`;
+  info.innerHTML = `${t('movesCount', { n: level.moves })}${level.hard ? `<br>⚡ <b>${t('hardLevel')}</b>` : ''}`;
   intro.append(info);
   const bonus = streakBonus(state.streak);
   if (bonus) {
     const sb = document.createElement('p');
     sb.className = 'streak-info';
-    sb.innerHTML = `🔥 <b>Win streak ×${state.streak}</b><br><small>+${bonus.moves} moves${bonus.specials.length ? ` and ${bonus.specials.length} free special jewel${bonus.specials.length > 1 ? 's' : ''}` : ''}</small>`;
+    sb.innerHTML = `🔥 <b>${t('streak', { n: state.streak })}</b><br><small>${bonus.specials.length ? t('streakSpecials', { m: bonus.moves, k: bonus.specials.length }) : t('streakMoves', { m: bonus.moves })}</small>`;
     intro.append(sb);
   }
   // Booster picker: tap to take one into the level, or buy one on the spot
@@ -653,7 +671,7 @@ async function startLevel(n) {
   const picker = document.createElement('div');
   picker.className = 'booster-pick';
   const renderPicker = () => {
-    picker.innerHTML = '<small>Boosters</small>';
+    picker.innerHTML = `<small>${t('boosters')}</small>`;
     const row = document.createElement('div');
     row.className = 'booster-row';
     for (const id of ['lance', 'bomb', 'orb']) {
@@ -661,12 +679,12 @@ async function startLevel(n) {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = `booster-opt${chosen.has(id) ? ' on' : ''}${owned ? '' : ' empty'}`;
-      b.setAttribute('aria-label', `${ITEMS[id].name}, ${owned} owned`);
+      b.setAttribute('aria-label', `${t(`item_${id}`)}, ${t('owned', { n: owned })}`);
       b.append(itemIcon(id, 46));
       b.insertAdjacentHTML('beforeend', owned ? `<b class="count">${owned}</b>` : `<b class="price">${COIN}${ITEMS[id].price}</b>`);
       b.addEventListener('click', () => {
         if (!owned) {
-          if (buyItem(state, id)) { save(state); updateCoinsUI(); sfx('star'); chosen.add(id); } else toast('Not enough coins. Visit the shop!');
+          if (buyItem(state, id)) { save(state); updateCoinsUI(); sfx('star'); chosen.add(id); } else toast(t('notEnough'));
         } else if (chosen.has(id)) chosen.delete(id);
         else chosen.add(id);
         renderPicker();
@@ -678,9 +696,9 @@ async function startLevel(n) {
   renderPicker();
   intro.append(picker);
   const choice = await modal({
-    title: `Level ${n}`,
+    title: `${t('level')} ${n}`,
     body: intro,
-    buttons: [{ label: 'Start ✨', value: 'go', cls: 'btn-primary' }, { label: 'Back', value: 'back', cls: 'btn-ghost' }],
+    buttons: [{ label: t('start'), value: 'go', cls: 'btn-primary' }, { label: t('back'), value: 'back', cls: 'btn-ghost' }],
   });
   if (choice !== 'go') return false;
   await adBreak();
@@ -709,8 +727,8 @@ async function startLevel(n) {
   buildGoalsUI();
   updateHUD();
   hideSpeech();
-  if (bonus && state.streak >= 2) setTimeout(() => cheer('streak', "You're on fire! Let's keep our streak going!", 2400, 'hop'), 700);
-  else setTimeout(() => cheer('lets-shine', "Let's shine together, darling!", 1900, 'hop'), 700);
+  if (bonus && state.streak >= 2) setTimeout(() => cheer('streak', t('streakCheer'), 2400, 'hop'), 700);
+  else setTimeout(() => cheer('lets-shine', t('letsShine'), 1900, 'hop'), 700);
   return true;
 }
 
@@ -737,7 +755,7 @@ function buildGoalsUI() {
   } else if (L.kind === 'ice') {
     wrap.innerHTML = '<span class="goal" data-ice>🧊 <b></b></span>';
   } else {
-    wrap.innerHTML = `<span class="goal">${CROWN_ICON}<b>${L.targetScore.toLocaleString('en-US')}</b></span>`;
+    wrap.innerHTML = `<span class="goal">${CROWN_ICON}<b>${fmt(L.targetScore)}</b></span>`;
   }
   // Star positions on the progress bar
   const max = L.starScores[2];
@@ -754,12 +772,12 @@ function rollScore(target) {
   cancelAnimationFrame(scoreAnim);
   const el = $('#hud-score');
   const from = scoreShown;
-  if (target < from) { scoreShown = target; el.textContent = target.toLocaleString('en-US'); return; }
+  if (target < from) { scoreShown = target; el.textContent = fmt(target); return; }
   const t0 = performance.now();
   const step = (t) => {
     const k = Math.min(1, (t - t0) / 450);
     scoreShown = Math.round(from + (target - from) * (1 - Math.pow(1 - k, 3)));
-    el.textContent = scoreShown.toLocaleString('en-US');
+    el.textContent = fmt(scoreShown);
     if (k < 1) scoreAnim = requestAnimationFrame(step);
   };
   scoreAnim = requestAnimationFrame(step);
@@ -796,9 +814,9 @@ function setWandMode(on) {
   renderer.wandMode = on;
   if (on) {
     clearTimeout(speechTimer);
-    $('#speech-text').textContent = 'Tap a jewel to smash it ✨';
+    $('#speech-text').textContent = t('wandHint');
     $('#speech').hidden = false;
-  } else if ($('#speech-text').textContent.startsWith('Tap a jewel')) hideSpeech();
+  } else if ($('#speech-text').textContent === t('wandHint')) hideSpeech();
   $('#btn-wand').classList.toggle('active', on);
   $('.board-frame').classList.toggle('wand-on', on);
 }
@@ -807,15 +825,15 @@ $('#btn-wand').addEventListener('click', async () => {
   if (renderer.wandMode) { setWandMode(false); return; }
   if (!state.items.wand) {
     const choice = await modal({
-      title: 'Royal Wand',
-      body: `<p>${ITEMS.wand.desc}</p>`,
+      title: t('item_wand'),
+      body: `<p>${t('item_wand_d')}</p>`,
       buttons: [
-        { label: `Buy one · ${COIN}${ITEMS.wand.price}`, value: 'buy', cls: 'btn-primary' },
-        { label: 'Not now', value: 'no', cls: 'btn-ghost' },
+        { label: t('buyOne', { price: `${COIN}${ITEMS.wand.price}` }), value: 'buy', cls: 'btn-primary' },
+        { label: t('notNow'), value: 'no', cls: 'btn-ghost' },
       ],
     });
     if (choice !== 'buy') return;
-    if (!buyItem(state, 'wand')) { toast('Not enough coins. Visit the shop!'); return; }
+    if (!buyItem(state, 'wand')) { toast(t('notEnough')); return; }
     save(state);
     updateCoinsUI();
   }
@@ -837,7 +855,7 @@ async function handleWand(cell) {
   await renderer.playSteps(result.steps, (step) => { if (step.type === 'clear') updateHUD(step.score); });
   updateHUD();
   renderer.busy = false;
-  cheer('my-hero', 'My hero! Hehe!', 1800, 'kiss');
+  cheer('my-hero', t('p_myHero'), 1800, 'kiss');
   if (engine.finished) await endOfMoves();
 }
 
@@ -871,21 +889,22 @@ async function handleSwap(a, b) {
 
 // The princess praises good moves out loud (not every move, so it stays special).
 const PRAISE = {
-  2: [['great', 'Ooh, great!'], ['sweet', 'Aww, so sweet!'], ['ooh-nice', 'Ooh, nice one!'], ['yay', 'Yay! Hehe!']],
-  3: [['amazing', 'Amazing! Hehe!'], ['wonderful', 'Mmm, wonderful!'], ['hehe', 'Hehe! Amazing!']],
-  4: [['fantastic', 'Fantastic, darling!'], ['so-good', "You're so good at this!"], ['wow', "Wow! I'm impressed!"]],
-  5: [['spectacular', "Spectacular! You're dazzling!"], ['my-hero', 'My hero! Hehe!']],
-  6: [['magnificent', 'Magnificent!']],
+  2: [['great', 'p_great'], ['sweet', 'p_sweet'], ['ooh-nice', 'p_oohNice'], ['yay', 'p_yay']],
+  3: [['amazing', 'p_amazing'], ['wonderful', 'p_wonderful'], ['hehe', 'p_hehe']],
+  4: [['fantastic', 'p_fantastic'], ['so-good', 'p_soGood'], ['wow', 'p_wow']],
+  5: [['spectacular', 'p_spectacular'], ['my-hero', 'p_myHero']],
+  6: [['magnificent', 'p_magnificent']],
 };
 function praiseMove(cascade, specials, rainbow) {
-  if (rainbow) { cheer('magnificent', "Magnificent! I'm impressed!", 2200, 'dance'); return true; }
+  if (rainbow) { cheer('magnificent', t('p_magnificentImp'), 2200, 'dance'); return true; }
   if (cascade >= 2) {
     const [key, text] = pick(PRAISE[Math.min(cascade, 6)]);
-    cheer(key, text, 1800, cascade >= 4 ? 'dance' : 'cheer');
+    cheer(key, t(text), 1800, cascade >= 4 ? 'dance' : 'cheer');
     return true;
   }
   if (specials > 0) {
-    cheer(...pick([['wonderful', 'Mmm, wonderful!'], ['brilliant', 'Brilliant! Hehe!'], ['smile', 'You make me smile!']]), 1800, 'kiss');
+    const [key, text] = pick([['wonderful', 'p_wonderful'], ['brilliant', 'p_brilliant'], ['smile', 'p_smile']]);
+    cheer(key, t(text), 1800, 'kiss');
     return true;
   }
   return false;
@@ -916,12 +935,12 @@ async function endOfMoves() {
     const pct = Math.round(engine.progress() * 100);
     if (pct >= 75) say('almost');
     const choice = await modal({
-      title: 'Out of moves!',
-      body: `<p>You reached <b>${pct}%</b> of your goal.${pct >= 75 ? ' So close!' : ''}</p>`,
+      title: t('outOfMoves'),
+      body: `<p>${t('reachedPct', { p: pct })}${pct >= 75 ? t('soClose') : ''}</p>`,
       buttons: [
-        { label: `🎬 Watch an ad for +${CONTINUE_MOVES} moves`, value: 'ad', cls: 'btn-ad' },
-        ...(state.coins >= EXTRA_MOVES_PRICE ? [{ label: `+${EXTRA_MOVES} moves · ${COIN}${EXTRA_MOVES_PRICE}`, value: 'buy', cls: 'btn-primary' }] : []),
-        { label: 'Give up', value: 'quit', cls: 'btn-ghost' },
+        { label: t('adMoves', { n: CONTINUE_MOVES }), value: 'ad', cls: 'btn-ad' },
+        ...(state.coins >= EXTRA_MOVES_PRICE ? [{ label: t('buyMoves', { n: EXTRA_MOVES, price: `${COIN}${EXTRA_MOVES_PRICE}` }), value: 'buy', cls: 'btn-primary' }] : []),
+        { label: t('giveUp'), value: 'quit', cls: 'btn-ghost' },
       ],
     });
     if (choice === 'buy' && spend(state, EXTRA_MOVES_PRICE)) {
@@ -930,9 +949,9 @@ async function endOfMoves() {
       continuesUsed++;
       engine.addMoves(EXTRA_MOVES);
       updateHUD();
-      renderer.bigText(`+${EXTRA_MOVES} Moves!`);
+      renderer.bigText(t('plusMoves', { n: EXTRA_MOVES }));
       sfx('special');
-      cheer('keep-going', "Let's keep going, together!", 1800, 'hop');
+      cheer('keep-going', t('keepGoing'), 1800, 'hop');
       return;
     }
     if (choice === 'ad') {
@@ -941,12 +960,12 @@ async function endOfMoves() {
         continuesUsed++;
         engine.addMoves(CONTINUE_MOVES);
         updateHUD();
-        renderer.bigText(`+${CONTINUE_MOVES} Moves!`);
+        renderer.bigText(t('plusMoves', { n: CONTINUE_MOVES }));
         sfx('special');
-        cheer('keep-going', "Let's keep going, together!", 1800, 'hop');
+        cheer('keep-going', t('keepGoing'), 1800, 'hop');
         return;
       }
-      toast('The ad could not load right now.');
+      toast(t('adNow'));
     }
   }
   return failFlow();
@@ -962,11 +981,11 @@ async function failFlow() {
   stagePrincess.react('sad');
   const lives = state.lives.lives;
   const choice = await modal({
-    title: 'Level failed',
-    body: `<p>You lost a life. Lives left: <b>${lives}</b> ❤</p><p class="small">Every try makes you better. You can do this!</p>`,
+    title: t('levelFailed'),
+    body: `<p>${t('lostLife', { n: lives })}</p><p class="small">${t('encourage')}</p>`,
     buttons: [
-      { label: 'Try again', value: 'retry', cls: 'btn-primary' },
-      { label: 'Kingdom Map', value: 'map', cls: 'btn-ghost' },
+      { label: t('tryAgain'), value: 'retry', cls: 'btn-primary' },
+      { label: t('kingdomMap'), value: 'map', cls: 'btn-ghost' },
     ],
   });
   await adBreak();
@@ -975,9 +994,9 @@ async function failFlow() {
 
 async function winFlow() {
   renderer.busy = true;
-  renderer.bigText('Level Complete!');
+  renderer.bigText(t('levelComplete'));
   sfx('win');
-  cheer('congratulations', 'Congratulations, darling!', 2400, 'dance');
+  cheer('congratulations', t('congrats'), 2400, 'dance');
   const leftover = engine.movesLeft;
   await renderer.celebrate(leftover);
   const bonus = engine.finishBonus();
@@ -1002,11 +1021,11 @@ async function winFlow() {
   setTimeout(() => { for (let i = 0; i < stars; i++) setTimeout(() => sfx('star'), i * 250); }, 100);
   setTimeout(() => say(stars === 3 ? 'you-did-it' : 'well-done'), 900);
   const choice = await modal({
-    title: `Level ${n} complete!`,
-    body: `<img class="modal-portrait breathe" src="img/prenses-yuz.jpg" alt=""><div class="big-stars">${starsHtml}</div><p>Score: <b>${engine.score.toLocaleString('en-US')}</b>${bonus ? `<br><small>Moves-left bonus: +${bonus.toLocaleString('en-US')}</small>` : ''}</p><div class="reward">+${reward} ${COIN}${fest.active ? ' <small>×2 festival</small>' : ''}</div>${shards ? `<div class="reward shards">+${shards} <span class="shard">✦</span></div>` : ''}<p class="small">🔥 Win streak ×${state.streak}</p>`,
+    title: t('levelNComplete', { n }),
+    body: `<img class="modal-portrait breathe" src="img/prenses-yuz.jpg" alt=""><div class="big-stars">${starsHtml}</div><p>${t('score')}: <b>${fmt(engine.score)}</b>${bonus ? `<br><small>${t('movesBonus')}: +${fmt(bonus)}</small>` : ''}</p><div class="reward">+${reward} ${COIN}${fest.active ? ` <small>${t('festX2')}</small>` : ''}</div>${shards ? `<div class="reward shards">+${shards} <span class="shard">✦</span></div>` : ''}<p class="small">🔥 ${t('streak', { n: state.streak })}</p>`,
     buttons: [
-      ...(n < LEVEL_COUNT ? [{ label: 'Next level ➜', value: 'next', cls: 'btn-primary' }] : []),
-      { label: 'Kingdom Map', value: 'map', cls: 'btn-ghost' },
+      ...(n < LEVEL_COUNT ? [{ label: t('nextLevel'), value: 'next', cls: 'btn-primary' }] : []),
+      { label: t('kingdomMap'), value: 'map', cls: 'btn-ghost' },
     ],
   });
 
@@ -1024,11 +1043,11 @@ $('#btn-quit').addEventListener('click', async () => {
   if (renderer.busy) return;
   if (!engine || engine.movesUsed === 0) { show('map'); return; }
   const choice = await modal({
-    title: 'Leave this level?',
-    body: `<p>If you leave now, you lose <b>1 life</b>${state.streak ? ` and your 🔥 win streak ×${state.streak}` : ''}.</p>`,
+    title: t('leaveTitle'),
+    body: `<p>${t('leaveBody', { extra: state.streak ? t('leaveStreak', { n: state.streak }) : '' })}</p>`,
     buttons: [
-      { label: 'Keep playing', value: 'stay', cls: 'btn-primary' },
-      { label: 'Leave (−1 life)', value: 'quit', cls: 'btn-ghost' },
+      { label: t('keepPlaying'), value: 'stay', cls: 'btn-primary' },
+      { label: t('leave'), value: 'quit', cls: 'btn-ghost' },
     ],
   });
   if (choice === 'quit') {
@@ -1049,9 +1068,9 @@ function trackPlayTime() {
   if (sessionPlaySeconds >= nextBreakAt && !renderer.busy && $('#modal').hidden) {
     nextBreakAt = sessionPlaySeconds + BREAK_REMINDER_SECONDS;
     modal({
-      title: 'Time for a short break? ☕',
-      body: '<p>You have been playing for half an hour. Drink some water, rest your eyes and stretch a little.</p><p class="small">Your game will be right here when you come back.</p>',
-      buttons: [{ label: 'OK', value: 'ok', cls: 'btn-primary' }],
+      title: t('breakTitle'),
+      body: `<p>${t('breakBody')}</p><p class="small">${t('breakSmall')}</p>`,
+      buttons: [{ label: t('ok'), value: 'ok', cls: 'btn-primary' }],
     });
   }
 }

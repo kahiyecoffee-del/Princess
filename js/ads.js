@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '../vendor/capacitor-core.js';
+import { t } from './i18n.js';
 
 // Reklam katmanı. Android'de AdMob (@capacitor-community/admob) kullanır;
 // tarayıcıda test için sahte bir reklam ekranı gösterir.
@@ -126,7 +127,7 @@ function mockAd({ rewarded }) {
     const el = document.getElementById('mock-ad');
     const timerEl = el.querySelector('.mock-ad-timer');
     const closeBtn = el.querySelector('.mock-ad-close');
-    el.querySelector('.mock-ad-kind').textContent = rewarded ? 'Rewarded ad (test)' : 'Interstitial ad (test)';
+    el.querySelector('.mock-ad-kind').textContent = rewarded ? t('rewardedTest') : t('interstitialTest');
     el.hidden = false;
     let left = 3;
     timerEl.textContent = left;
