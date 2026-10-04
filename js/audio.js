@@ -33,26 +33,41 @@ function tone(freq, { dur = 0.15, type = 'sine', vol = 0.12, delay = 0, slide = 
   o.stop(t + dur + 0.02);
 }
 
+// Bell-like chime: a few partials plus a soft echo, for a magical, jewel-box feel.
+function bell(freq, { vol = 0.08, dur = 0.6, delay = 0, echo = true } = {}) {
+  tone(freq, { dur, vol, delay });
+  tone(freq * 2.0, { dur: dur * 0.6, vol: vol * 0.35, delay });
+  tone(freq * 3.01, { dur: dur * 0.35, vol: vol * 0.15, delay });
+  if (echo) {
+    tone(freq, { dur: dur * 0.8, vol: vol * 0.28, delay: delay + 0.14 });
+    tone(freq * 2.0, { dur: dur * 0.5, vol: vol * 0.1, delay: delay + 0.28 });
+  }
+}
+
+function sweep(from, to, { vol = 0.05, dur = 0.4, delay = 0 } = {}) {
+  tone(from, { dur, vol, delay, slide: to / from });
+}
+
 export function play(name, n = 1) {
   if (!enabled) return;
   switch (name) {
-    case 'select': tone(880, { dur: 0.06, vol: 0.05 }); break;
-    case 'invalid': tone(220, { dur: 0.15, type: 'triangle', vol: 0.08, slide: 0.7 }); break;
+    case 'select': bell(1568, { vol: 0.035, dur: 0.18, echo: false }); break;
+    case 'invalid': tone(196, { dur: 0.16, type: 'triangle', vol: 0.07, slide: 0.8 }); break;
     case 'match': {
       const f = SCALE[Math.min(n - 1, SCALE.length - 1)];
-      tone(f, { dur: 0.18, type: 'triangle', vol: 0.1 });
-      tone(f * 2, { dur: 0.12, vol: 0.04, delay: 0.03 });
+      bell(f, { vol: 0.07, dur: 0.5 });
       break;
     }
-    case 'combo': tone(SCALE[Math.min(n + 2, SCALE.length - 1)], { dur: 0.3, type: 'sine', vol: 0.08, delay: 0.05 }); break;
-    case 'special': tone(1318, { dur: 0.25, vol: 0.06, slide: 1.5 }); break;
-    case 'line': tone(1800, { dur: 0.3, type: 'sawtooth', vol: 0.03, slide: 0.3 }); break;
-    case 'bomb': tone(160, { dur: 0.4, type: 'square', vol: 0.06, slide: 0.4 }); break;
-    case 'rainbow': [0, 2, 4, 5, 7].forEach((i, k) => tone(SCALE[i % SCALE.length], { dur: 0.3, vol: 0.06, delay: k * 0.05 })); break;
-    case 'ice': tone(2400, { dur: 0.08, type: 'triangle', vol: 0.04 }); break;
-    case 'win': [0, 2, 4, 7, 8].forEach((i, k) => tone(SCALE[i], { dur: 0.35, type: 'triangle', vol: 0.09, delay: k * 0.12 })); break;
-    case 'lose': [4, 2, 0].forEach((i, k) => tone(SCALE[i] / 2, { dur: 0.4, type: 'triangle', vol: 0.08, delay: k * 0.18 })); break;
-    case 'star': tone(1567, { dur: 0.3, vol: 0.08 }); break;
+    case 'combo': [0, 2, 4].forEach((k, i) => bell(SCALE[Math.min(n + k, SCALE.length - 1)], { vol: 0.045, dur: 0.5, delay: 0.06 * i, echo: false })); break;
+    case 'special': sweep(880, 2640, { vol: 0.04, dur: 0.35 }); bell(1760, { vol: 0.05, dur: 0.6, delay: 0.25 }); break;
+    case 'line': sweep(2400, 600, { vol: 0.035, dur: 0.35 }); break;
+    case 'bomb': tone(110, { dur: 0.5, type: 'sine', vol: 0.16, slide: 0.45 }); tone(70, { dur: 0.6, type: 'triangle', vol: 0.08, slide: 0.6 }); break;
+    case 'rainbow': [0, 2, 4, 5, 7, 8].forEach((i, k) => bell(SCALE[i % SCALE.length], { vol: 0.045, dur: 0.5, delay: k * 0.06, echo: false })); break;
+    case 'ice': bell(2637, { vol: 0.03, dur: 0.2, echo: false }); break;
+    case 'win': [0, 2, 4, 7, 8].forEach((i, k) => bell(SCALE[i], { vol: 0.07, dur: 0.8, delay: k * 0.13 })); break;
+    case 'lose': [4, 2, 0].forEach((i, k) => tone(SCALE[i] / 2, { dur: 0.5, type: 'triangle', vol: 0.07, delay: k * 0.2 })); break;
+    case 'star': bell(1568, { vol: 0.07, dur: 0.7 }); break;
+    case 'heart': bell(2093, { vol: 0.03, dur: 0.3, echo: false }); break;
     case 'breath': tone(392, { dur: 1.2, vol: 0.04 }); break;
     default: break;
   }

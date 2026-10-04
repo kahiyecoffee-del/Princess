@@ -11,6 +11,9 @@ function defaults() {
     lives: createLives(Date.now()),
     levelsSinceAd: 0,
     sound: true,
+    music: true,
+    voice: true,
+    haptics: true,
     recovery: {
       quitDate: null, // kumarı bıraktığı tarih (YYYY-MM-DD)
       dailySpend: 0, // eskiden günlük ortalama harcama (₺)
