@@ -8,6 +8,10 @@
   "plugins": {
     "AdMob": {
       "appIdAndroid": "ca-app-pub-3940256099942544~3347511713"
+    },
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_crown",
+      "iconColor": "#E8B64A"
     }
   }
 }

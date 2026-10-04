@@ -16,7 +16,10 @@
     "@capacitor-community/admob": "^8.1.0",
     "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.2",
-    "@capacitor/core": "^8.5.2"
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/share": "^8.0.3",
+    "@capgo/native-purchases": "^8.8.1"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2"

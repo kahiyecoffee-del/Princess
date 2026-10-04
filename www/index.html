@@ -30,6 +30,11 @@
       <button class="coin-pill" id="btn-coins" aria-label="Coins, open shop"><span class="coin"></span><b id="coin-count">0</b><span class="plus">+</span></button>
       <button class="icon-btn" id="btn-settings" aria-label="Settings">⚙</button>
     </div>
+    <button class="festival-banner" id="festival-banner" hidden>
+      <span class="fest-star">✦</span>
+      <span class="fest-text"><b id="fest-title">Star Festival</b><small id="fest-sub"></small></span>
+      <span class="fest-bar"><i id="fest-fill"></i></span>
+    </button>
     <div class="map-atmos" aria-hidden="true">
       <div class="moonbeam"></div>
       <div class="cloud c1"></div><div class="cloud c2"></div><div class="cloud c3"></div>
@@ -79,12 +84,25 @@
     <div class="board-wrap"><div class="board-frame ornate"><canvas id="board"></canvas></div></div>
   </section>
 
+  <!-- CHAPTER STORY -->
+  <div class="story" id="story" hidden>
+    <div class="story-inner">
+      <small class="story-chapter" id="story-chapter">Chapter 1 complete</small>
+      <div class="princess-story" id="princess-story"></div>
+      <p class="story-text" id="story-text"></p>
+      <div class="story-reward" id="story-reward"></div>
+      <button class="btn btn-primary" id="story-next">Continue</button>
+    </div>
+  </div>
+
   <!-- MODAL -->
   <div class="modal-backdrop" id="modal" hidden>
     <div class="modal ornate">
-      <div class="modal-title" id="modal-title"></div>
-      <div class="modal-body" id="modal-body"></div>
-      <div class="modal-buttons" id="modal-buttons"></div>
+      <div class="modal-scroll">
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-buttons" id="modal-buttons"></div>
+      </div>
     </div>
   </div>
 

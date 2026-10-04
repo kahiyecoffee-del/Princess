@@ -159,3 +159,61 @@ test('ekonomi: satın alma, kullanma, günlük ödül serisi, reklam parası sı
   assert.equal(grantAdCoins(st, d1), false);
   assert.ok(levelReward(3, true) > levelReward(3, false));
 });
+
+test('kazanma serisi, festival ve bölüm hikâyeleri', async () => {
+  const { streakBonus, festivalInfo, festivalState, addShards, claimFestival, chapterStory } = await import('../www/js/progression.js');
+  assert.equal(streakBonus(0), null);
+  assert.equal(streakBonus(1).moves, 2);
+  assert.equal(streakBonus(9).specials.length, 2);
+  // 2026-10-02 Cuma, 10-04 Pazar, 10-05 Pazartesi
+  const fri = new Date(2026, 9, 2, 10); const sun = new Date(2026, 9, 4, 22); const mon = new Date(2026, 9, 5, 9);
+  assert.ok(festivalInfo(fri).active);
+  assert.ok(festivalInfo(sun).active);
+  assert.equal(festivalInfo(fri).key, festivalInfo(sun).key);
+  assert.ok(!festivalInfo(mon).active);
+  assert.equal(festivalInfo(mon).startsAt.getDay(), 5);
+  const st = initEconomy({});
+  festivalState(st, fri);
+  assert.equal(addShards(st, 12, fri), 12);
+  assert.equal(addShards(initEconomy({}), 5, mon), 0, 'festival dışında parça yok');
+  const coins = st.coins;
+  assert.ok(claimFestival(st, 0, sun));
+  assert.equal(st.coins, coins + 150);
+  assert.equal(claimFestival(st, 0, sun), null, 'iki kez alınamaz');
+  assert.equal(claimFestival(st, 1, sun), null, 'yetersiz parça');
+  festivalState(st, new Date(2026, 9, 9, 10));
+  assert.equal(st.festival.shards, 0, 'yeni hafta sıfırlanır');
+  assert.equal(chapterStory(9), null);
+  assert.equal(chapterStory(10).voice, 'story1');
+  assert.equal(chapterStory(110).voice, 'story1');
+});
+
+test('bildirim planı: canlar, günlük hediye, festival, özlem', async () => {
+  const { planNotifications } = await import('../www/js/notifications.js');
+  const now = new Date(2026, 9, 5, 12); // Pazartesi
+  const st = initEconomy({ lives: createLives(now.getTime()) });
+  loseLife(st.lives, now.getTime());
+  const plan = planNotifications(st, now);
+  const ids = plan.map((n) => n.id).sort();
+  assert.deepEqual(ids, [1, 2, 3, 4]);
+  const lives = plan.find((n) => n.id === 1);
+  assert.equal(lives.at.getTime(), now.getTime() + REGEN_MS);
+  assert.equal(plan.find((n) => n.id === 3).at.getDay(), 5, 'festival cuma');
+});
+
+test('davet kodu: kendi kodu, geçersiz, bir kez kullanım, günlük paylaşım ödülü', async () => {
+  const { ensurePlayerId, redeemInvite, grantShareReward, INVITE_REWARD } = await import('../www/js/economy.js');
+  const st = initEconomy({});
+  const id = ensurePlayerId(st, mulberry32(5));
+  assert.match(id, /^[A-HJ-NP-Z2-9]{6}$/);
+  assert.equal(ensurePlayerId(st), id, 'kod değişmez');
+  assert.equal(redeemInvite(st, id), 'own');
+  assert.equal(redeemInvite(st, 'abc'), 'invalid');
+  const c = st.coins;
+  assert.equal(redeemInvite(st, 'k7m2qp'), 'ok');
+  assert.equal(st.coins, c + INVITE_REWARD);
+  assert.equal(redeemInvite(st, 'ZZZZ22'), 'already');
+  const d = new Date(2026, 9, 5);
+  assert.ok(grantShareReward(st, d));
+  assert.equal(grantShareReward(st, d), false);
+});
