@@ -90,3 +90,34 @@ export function grantAdCoins(state, now = new Date()) {
   state.coins += AD_COINS;
   return true;
 }
+
+// ---------- Invites ----------
+// Without a server we cannot verify that a friend installed the game, so:
+// the new player gets INVITE_REWARD for entering a friend's code (once),
+// and the sharer gets SHARE_REWARD once a day for sharing their code.
+export const INVITE_REWARD = 500;
+export const SHARE_REWARD = 50;
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+export function ensurePlayerId(state, rng = Math.random) {
+  if (!state.playerId) state.playerId = Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(rng() * CODE_CHARS.length)]).join('');
+  return state.playerId;
+}
+
+export function redeemInvite(state, raw) {
+  const code = String(raw || '').trim().toUpperCase();
+  if (state.inviteRedeemed) return 'already';
+  if (!/^[A-HJ-NP-Z2-9]{6}$/.test(code)) return 'invalid';
+  if (code === state.playerId) return 'own';
+  state.inviteRedeemed = code;
+  state.coins += INVITE_REWARD;
+  return 'ok';
+}
+
+export function grantShareReward(state, now = new Date()) {
+  const today = dayStr(now);
+  if (state.shareRewardDay === today) return false;
+  state.shareRewardDay = today;
+  state.coins += SHARE_REWARD;
+  return true;
+}

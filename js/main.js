@@ -3,8 +3,13 @@ import { getLevel, LEVEL_COUNT, describeGoal } from './levels.js';
 import { Renderer, drawGem, drawJewel } from './render.js';
 import { SP } from './board.js';
 import {
+  streakBonus, festivalState, addShards, claimFestival, FESTIVAL_MILESTONES, FESTIVAL_COIN_MULTIPLIER,
+  chapterStory, CHAPTER_REWARD,
+} from './progression.js';
+import {
   ITEMS, ITEM_ORDER, initEconomy, buyItem, useItem, spend, levelReward, dailyStatus, claimDaily, DAILY,
   adCoinsLeft, grantAdCoins, AD_COINS, LIVES_REFILL_PRICE, EXTRA_MOVES_PRICE, EXTRA_MOVES,
+  ensurePlayerId, redeemInvite, grantShareReward, INVITE_REWARD, SHARE_REWARD,
 } from './economy.js';
 import { load, save } from './storage.js';
 import { MAX_LIVES, refresh, loseLife, addLife, msToNext, formatMs } from './lives.js';
@@ -13,6 +18,8 @@ import { initAds, showInterstitial, showRewarded, AD_CONFIG } from './ads.js';
 import { play as sfx, setSoundEnabled } from './audio.js';
 import { say, giggle, setTrack, holdMusic, setVoiceEnabled, setMusicEnabled, setGreeting, setMouthListener } from './voice.js';
 import { Princess } from './princess.js';
+import { askPermission, scheduleAll } from './notifications.js';
+import { COIN_PACKS, NO_ADS, initStore, priceOf, buy, ownsNoAds, restore, isTestStore } from './purchases.js';
 
 // How many times per attempt the player can watch an ad for +3 moves.
 const MAX_CONTINUES = 2;
@@ -23,6 +30,7 @@ const BREAK_REMINDER_SECONDS = 30 * 60;
 const $ = (s) => document.querySelector(s);
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const state = initEconomy(load());
+ensurePlayerId(state);
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music !== false);
 setVoiceEnabled(state.voice !== false);
@@ -38,7 +46,7 @@ const tapLine = () => say(Math.random() < 0.6 ? 'tickles' : pick(['giggle1', 'gi
 const homePrincess = new Princess($('#princess-home'), { onGiggle: giggle });
 const stagePrincess = new Princess($('#princess-stage'), { onTap: tapLine, onGiggle: giggle, framed: false });
 // Whichever princess is on screen moves her lips with her voice
-setMouthListener((lvl) => (currentScreen === 'game' ? stagePrincess : homePrincess).mouth(lvl));
+setMouthListener((lvl) => (storyMode ? storyPrincess : currentScreen === 'game' ? stagePrincess : homePrincess).mouth(lvl));
 
 // When the player seems stuck, the princess leans toward the board and whispers a hint.
 let lastHintTalk = 0;
@@ -68,6 +76,7 @@ async function withAd(fn) {
 // AdMob forbids ads that interrupt gameplay.
 let adClock = 0;
 async function adBreak() {
+  if (state.noAds) return;
   if (adClock < AD_CONFIG.INTERSTITIAL_EVERY_SECONDS && (state.levelsSinceAd || 0) < AD_CONFIG.INTERSTITIAL_EVERY_N_LEVELS) return;
   state.levelsSinceAd = 0;
   save(state);
@@ -89,7 +98,7 @@ function show(name) {
   setTrack(name === 'game' ? 'game' : 'menu');
   if (name === 'map') renderMap();
   if (name === 'game') requestAnimationFrame(() => renderer.resize());
-  if (name === 'map') { updateCoinsUI(); if (!dailyShown) { dailyShown = true; setTimeout(() => openDaily(true), 900); } }
+  if (name === 'map') { updateCoinsUI(); updateFestivalUI(); if (!dailyShown) { dailyShown = true; setTimeout(() => openDaily(true), 900); } }
 }
 
 // ---------- Modal ----------
@@ -243,6 +252,41 @@ async function openShop() {
     });
     extra.append(refill, ad);
     body.append(extra);
+
+    // Real-money section
+    const testBuy = () => { toast('Test mode: no real payment was made.'); return true; };
+    const gold = document.createElement('div');
+    gold.className = 'shop-section';
+    gold.innerHTML = `<h3>Treasure Chests</h3>${isTestStore ? '<p class="small">Web demo: purchases are simulated.</p>' : ''}`;
+    const packs = document.createElement('div');
+    packs.className = 'pack-grid';
+    COIN_PACKS.forEach((p, i) => {
+      const b = document.createElement('button');
+      b.className = `pack${p.tag === 'Best value' ? ' best' : ''}`;
+      b.innerHTML = `${p.tag ? `<em>${p.tag}</em>` : ''}<span class="pack-chest size${i}"></span><b>${COIN}${p.coins.toLocaleString('en-US')}</b><span class="pack-price">${priceOf(p)}</span>`;
+      b.addEventListener('click', async () => {
+        if (await buy(p.id, { consumable: true }, testBuy)) {
+          addCoins(p.coins); sfx('win'); say('yay'); render();
+        }
+      });
+      packs.append(b);
+    });
+    gold.append(packs);
+    const noAds = document.createElement('button');
+    noAds.className = 'btn no-ads';
+    noAds.innerHTML = state.noAds ? '✓ No ads: thank you, darling! 💖' : `🚫 Remove ads forever · ${priceOf(NO_ADS)}<small>Rewarded ads stay optional</small>`;
+    noAds.disabled = !!state.noAds;
+    noAds.addEventListener('click', async () => {
+      if (await buy(NO_ADS.id, { consumable: false }, testBuy)) { state.noAds = true; save(state); sfx('win'); say('my-hero'); render(); }
+    });
+    const restoreBtn = document.createElement('button');
+    restoreBtn.className = 'link-btn';
+    restoreBtn.textContent = 'Restore purchases';
+    restoreBtn.addEventListener('click', async () => {
+      if (await restore()) { state.noAds = true; save(state); toast('No-ads restored ✓'); render(); } else toast('Nothing to restore.');
+    });
+    gold.append(noAds, restoreBtn);
+    body.append(gold);
   };
   render();
   await modal({ title: 'Royal Shop', body, buttons: [{ label: 'Close', value: 'ok', cls: 'btn-ghost' }] });
@@ -333,6 +377,7 @@ const SETTINGS = [
   ['sound', 'Sound effects', (v) => setSoundEnabled(v)],
   ['voice', "Princess's voice", (v) => setVoiceEnabled(v)],
   ['haptics', 'Vibration', () => {}],
+  ['notify', 'Reminders from the princess', (v) => { if (v) askPermission(); scheduleAll(state); }],
 ];
 $('#btn-settings').addEventListener('click', () => {
   const body = document.createElement('div');
@@ -349,6 +394,20 @@ $('#btn-settings').addEventListener('click', () => {
     });
     body.append(row);
   }
+  const invite = document.createElement('div');
+  invite.className = 'invite-box';
+  invite.innerHTML = `<small>Your invite code</small><b class="invite-code">${state.playerId}</b>`;
+  const shareBtn = document.createElement('button');
+  shareBtn.className = 'btn btn-secondary';
+  shareBtn.innerHTML = `💌 Invite friends <small>(+${SHARE_REWARD} ${COIN} a day)</small>`;
+  shareBtn.addEventListener('click', () => shareInvite());
+  const codeBtn = document.createElement('button');
+  codeBtn.className = 'btn btn-ghost';
+  codeBtn.textContent = state.inviteRedeemed ? `Invite code used: ${state.inviteRedeemed}` : `Enter a friend's code (+${INVITE_REWARD} coins)`;
+  codeBtn.disabled = !!state.inviteRedeemed;
+  codeBtn.addEventListener('click', () => { $('#modal').hidden = true; enterInviteCode(); });
+  invite.append(shareBtn, codeBtn);
+  body.append(invite);
   const test = document.createElement('button');
   test.className = 'btn btn-ghost test-voice';
   test.textContent = '▶ Test her voice';
@@ -356,6 +415,30 @@ $('#btn-settings').addEventListener('click', () => {
   body.append(test);
   modal({ title: 'Settings', body, buttons: [{ label: 'Done', value: 'ok', cls: 'btn-primary' }] });
 });
+
+// ---------- Invites ----------
+const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.gokyuzuprensesi.oyun';
+const SharePlugin = Capacitor.isNativePlatform() ? registerPlugin('Share') : null;
+async function shareInvite() {
+  const text = `Come play The Sky Princess with me! 👑 Enter my invite code ${state.playerId} in Settings and get ${INVITE_REWARD} free coins.`;
+  let shared = false;
+  try {
+    if (SharePlugin) { await SharePlugin.share({ title: 'The Sky Princess', text, url: PLAY_URL, dialogTitle: 'Invite a friend' }); shared = true; }
+    else if (navigator.share) { await navigator.share({ title: 'The Sky Princess', text, url: PLAY_URL }); shared = true; }
+    else { await navigator.clipboard.writeText(`${text} ${PLAY_URL}`); toast('Invite copied! Paste it to a friend.'); shared = true; }
+  } catch { /* cancelled */ }
+  if (shared && grantShareReward(state)) { save(state); updateCoinsUI(); toast(`+${SHARE_REWARD} coins for sharing! 💌`); }
+}
+async function enterInviteCode() {
+  const body = document.createElement('div');
+  body.innerHTML = `<p>Enter your friend's 6-letter code to get <b>${INVITE_REWARD}</b> ${COIN}</p><input id="invite-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC123" class="invite-input">`;
+  const choice = await modal({ title: 'Invite code', body, buttons: [{ label: 'Redeem', value: 'ok', cls: 'btn-primary' }, { label: 'Cancel', value: 'no', cls: 'btn-ghost' }] });
+  if (choice !== 'ok') return;
+  const res = redeemInvite(state, $('#invite-input').value);
+  const msg = { ok: `Welcome! +${INVITE_REWARD} coins 💖`, own: "That's your own code, darling!", invalid: 'That code does not look right.', already: 'You already used an invite code.' }[res];
+  if (res === 'ok') { save(state); updateCoinsUI(); sfx('win'); say('yay'); }
+  toast(msg);
+}
 
 // ---------- Kingdom map ----------
 // A winding golden road climbs from level 1 (bottom) to the castle (top).
@@ -447,6 +530,91 @@ $('#map-scroll').addEventListener('scroll', mapParallax, { passive: true });
   }
 }());
 
+// ---------- Chapter story ----------
+const storyPrincess = new Princess($('#princess-story'), { onTap: tapLine });
+async function showStory(story) {
+  const el = $('#story');
+  $('#story-chapter').textContent = `Chapter ${story.chapter} complete`;
+  const textEl = $('#story-text');
+  textEl.textContent = '';
+  $('#story-reward').innerHTML = `+${CHAPTER_REWARD} ${COIN}`;
+  $('#story-reward').classList.remove('show');
+  el.hidden = false;
+  storyMode = true;
+  storyPrincess.react('cheer');
+  setTimeout(() => say(story.voice), 500);
+  // Type the words in as she speaks
+  const words = story.text.split(' ');
+  for (let i = 0; i < words.length; i++) {
+    textEl.textContent += (i ? ' ' : '') + words[i];
+    await new Promise((r) => setTimeout(r, 190));
+  }
+  state.coins += CHAPTER_REWARD;
+  save(state);
+  updateCoinsUI();
+  $('#story-reward').classList.add('show');
+  sfx('win');
+  await new Promise((r) => { $('#story-next').onclick = r; });
+  el.hidden = true;
+  storyMode = false;
+}
+let storyMode = false;
+
+// ---------- Star Festival ----------
+function fmtLeft(ms) {
+  const h = Math.max(0, Math.floor(ms / 3600000));
+  return h >= 24 ? `${Math.floor(h / 24)}d ${h % 24}h` : `${h}h ${Math.floor((ms % 3600000) / 60000)}m`;
+}
+function updateFestivalUI() {
+  const f = festivalState(state);
+  const banner = $('#festival-banner');
+  banner.hidden = false;
+  banner.classList.toggle('live', f.active);
+  const goal = FESTIVAL_MILESTONES[FESTIVAL_MILESTONES.length - 1].shards;
+  if (f.active) {
+    $('#fest-title').textContent = 'Star Festival · 2× coins';
+    $('#fest-sub').textContent = `${f.shards}/${goal} star shards · ends in ${fmtLeft(f.endsAt - Date.now())}`;
+  } else {
+    $('#fest-title').textContent = 'Star Festival';
+    $('#fest-sub').textContent = `Starts in ${fmtLeft(f.startsAt - Date.now())} · every weekend`;
+  }
+  $('#fest-fill').style.width = `${Math.min(100, (f.shards / goal) * 100)}%`;
+  // Announce the festival once per weekend
+  if (f.active && state.festivalAnnounced !== f.key) {
+    state.festivalAnnounced = f.key;
+    save(state);
+    setTimeout(() => { say('festival'); toast("✦ The Star Festival is live! Double coins all weekend."); }, 1200);
+  }
+  const claimable = FESTIVAL_MILESTONES.some((m, i) => f.shards >= m.shards && !f.claimed.includes(i));
+  banner.classList.toggle('claim', claimable);
+}
+$('#festival-banner').addEventListener('click', async () => {
+  const f = festivalState(state);
+  const body = document.createElement('div');
+  body.className = 'festival';
+  const render = () => {
+    const st = festivalState(state);
+    body.innerHTML = `<p>${st.active ? 'Every star you earn this weekend becomes a <b>star shard</b>, and all level coins are doubled!' : 'Every weekend the kingdom celebrates. Earn star shards for royal prizes and double coins!'}</p>`;
+    FESTIVAL_MILESTONES.forEach((m, i) => {
+      const row = document.createElement('div');
+      const done = st.claimed.includes(i);
+      const ready = st.shards >= m.shards && !done;
+      row.className = `fest-row${done ? ' done' : ''}${ready ? ' ready' : ''}`;
+      row.innerHTML = `<span class="shard">✦</span><b>${m.shards}</b><span class="fest-prize">${m.coins} ${COIN}${m.item ? ` + ${ITEMS[m.item].name}` : ''}</span>`;
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary';
+      btn.textContent = done ? '✓' : 'Claim';
+      btn.disabled = !ready;
+      btn.addEventListener('click', () => { if (claimFestival(state, i)) { save(state); updateCoinsUI(); sfx('win'); render(); } });
+      row.append(btn);
+      body.append(row);
+    });
+  };
+  render();
+  await modal({ title: f.active ? 'Star Festival' : 'Star Festival', body, buttons: [{ label: 'Close', value: 'ok', cls: 'btn-ghost' }] });
+  updateFestivalUI();
+});
+
 // ---------- Game flow ----------
 async function startLevel(n) {
   refresh(state.lives, Date.now());
@@ -473,6 +641,13 @@ async function startLevel(n) {
   const info = document.createElement('p');
   info.innerHTML = `<b>${level.moves}</b> moves${level.hard ? '<br>⚡ <b>Hard level!</b>' : ''}`;
   intro.append(info);
+  const bonus = streakBonus(state.streak);
+  if (bonus) {
+    const sb = document.createElement('p');
+    sb.className = 'streak-info';
+    sb.innerHTML = `🔥 <b>Win streak ×${state.streak}</b><br><small>+${bonus.moves} moves${bonus.specials.length ? ` and ${bonus.specials.length} free special jewel${bonus.specials.length > 1 ? 's' : ''}` : ''}</small>`;
+    intro.append(sb);
+  }
   // Booster picker: tap to take one into the level, or buy one on the spot
   const chosen = new Set();
   const picker = document.createElement('div');
@@ -518,6 +693,10 @@ async function startLevel(n) {
   // Place the chosen boosters on the board
   const specials = [];
   for (const id of chosen) if (useItem(state, id)) specials.push(...ITEMS[id].specials);
+  if (bonus) {
+    engine.addMoves(bonus.moves);
+    specials.push(...bonus.specials);
+  }
   save(state);
   updateCoinsUI();
   if (specials.length) {
@@ -530,7 +709,8 @@ async function startLevel(n) {
   buildGoalsUI();
   updateHUD();
   hideSpeech();
-  setTimeout(() => cheer('lets-shine', "Let's shine together, darling!", 1900, 'hop'), 700);
+  if (bonus && state.streak >= 2) setTimeout(() => cheer('streak', "You're on fire! Let's keep our streak going!", 2400, 'hop'), 700);
+  else setTimeout(() => cheer('lets-shine', "Let's shine together, darling!", 1900, 'hop'), 700);
   return true;
 }
 
@@ -773,6 +953,7 @@ async function endOfMoves() {
 }
 
 async function failFlow() {
+  state.streak = 0;
   loseLife(state.lives, Date.now());
   save(state);
   updateLivesUI();
@@ -805,8 +986,12 @@ async function winFlow() {
 
   const n = currentLevel;
   const stars = engine.stars();
-  const reward = levelReward(stars, !state.stars[n]);
+  const firstClear = !state.stars[n];
+  const fest = festivalState(state);
+  const reward = levelReward(stars, firstClear) * (fest.active ? FESTIVAL_COIN_MULTIPLIER : 1);
+  const shards = addShards(state, stars);
   state.coins += reward;
+  state.streak = (state.streak || 0) + 1;
   state.stars[n] = Math.max(state.stars[n] || 0, stars);
   state.best[n] = Math.max(state.best[n] || 0, engine.score);
   if (n === state.maxLevel && n < LEVEL_COUNT) state.maxLevel = n + 1;
@@ -818,13 +1003,18 @@ async function winFlow() {
   setTimeout(() => say(stars === 3 ? 'you-did-it' : 'well-done'), 900);
   const choice = await modal({
     title: `Level ${n} complete!`,
-    body: `<img class="modal-portrait breathe" src="img/prenses-yuz.jpg" alt=""><div class="big-stars">${starsHtml}</div><p>Score: <b>${engine.score.toLocaleString('en-US')}</b>${bonus ? `<br><small>Moves-left bonus: +${bonus.toLocaleString('en-US')}</small>` : ''}</p><div class="reward">+${reward} ${COIN}</div>`,
+    body: `<img class="modal-portrait breathe" src="img/prenses-yuz.jpg" alt=""><div class="big-stars">${starsHtml}</div><p>Score: <b>${engine.score.toLocaleString('en-US')}</b>${bonus ? `<br><small>Moves-left bonus: +${bonus.toLocaleString('en-US')}</small>` : ''}</p><div class="reward">+${reward} ${COIN}${fest.active ? ' <small>×2 festival</small>' : ''}</div>${shards ? `<div class="reward shards">+${shards} <span class="shard">✦</span></div>` : ''}<p class="small">🔥 Win streak ×${state.streak}</p>`,
     buttons: [
       ...(n < LEVEL_COUNT ? [{ label: 'Next level ➜', value: 'next', cls: 'btn-primary' }] : []),
       { label: 'Kingdom Map', value: 'map', cls: 'btn-ghost' },
     ],
   });
 
+  // Ask for notification permission at a happy moment: right after the first win
+  if (n === 1 && firstClear) askPermission();
+  // Chapter finished for the first time: the princess tells the story
+  const story = firstClear ? chapterStory(n) : null;
+  if (story) await showStory(story);
   // Interstitial every 90 seconds of play (or every 5 levels), at this natural break
   await adBreak();
   if (choice !== 'next' || !(await startLevel(n + 1))) show('map');
@@ -835,13 +1025,14 @@ $('#btn-quit').addEventListener('click', async () => {
   if (!engine || engine.movesUsed === 0) { show('map'); return; }
   const choice = await modal({
     title: 'Leave this level?',
-    body: '<p>If you leave now, you lose <b>1 life</b>.</p>',
+    body: `<p>If you leave now, you lose <b>1 life</b>${state.streak ? ` and your 🔥 win streak ×${state.streak}` : ''}.</p>`,
     buttons: [
       { label: 'Keep playing', value: 'stay', cls: 'btn-primary' },
       { label: 'Leave (−1 life)', value: 'quit', cls: 'btn-ghost' },
     ],
   });
   if (choice === 'quit') {
+    state.streak = 0;
     loseLife(state.lives, Date.now());
     save(state);
     engine = null;
@@ -943,10 +1134,12 @@ AppPlugin?.addListener('backButton', () => {
   else AppPlugin.minimizeApp();
 });
 
-document.addEventListener('visibilitychange', () => { if (document.hidden) save(state); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { save(state); scheduleAll(state); } });
 
 show('home');
 initAds();
+initStore();
+ownsNoAds().then((v) => { if (v && !state.noAds) { state.noAds = true; save(state); } });
 // Greet the player on the first tap (browsers only allow sound after a tap)
 setGreeting(() => (currentScreen === 'home' ? (state.maxLevel > 1 ? 'welcome' : 'hi') : null));
 

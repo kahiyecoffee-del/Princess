@@ -16,7 +16,7 @@ export const VOICE_LINES = [
   'great', 'amazing', 'fantastic', 'spectacular', 'magnificent', 'wonderful', 'brilliant', 'sweet',
   'congratulations', 'you-did-it', 'well-done', 'keep-going', 'dont-give-up', 'lets-shine',
   'ooh-nice', 'so-good', 'hehe', 'my-hero', 'smile', 'wow', 'welcome', 'tickles', 'hi', 'almost',
-  'psst', 'giggle1', 'giggle2', 'giggle3', 'yay',
+  'psst', 'giggle1', 'giggle2', 'giggle3', 'yay', 'festival', 'streak',
 ];
 
 const SILENCE = 'audio/silence.mp3';
@@ -77,6 +77,15 @@ function decode(ctx, data) {
   });
 }
 
+const pending = new Map();
+function loadOne(ctx, key) {
+  if (!pending.has(key)) {
+    pending.set(key, fetch(`audio/${key}.mp3`).then((r) => r.arrayBuffer()).then((d) => decode(ctx, d))
+      .then((b) => { buffers.set(key, b); return b; }).catch(() => null));
+  }
+  return pending.get(key);
+}
+
 export function preloadVoices() {
   const ctx = audioContext();
   if (!ctx || loading) return loading;
@@ -122,6 +131,11 @@ export function say(key) {
     src.start(0);
     current = src;
     trackLevel(ctx, ctx.currentTime + buf.duration);
+    return;
+  }
+  // Clips outside the preload list (chapter stories) are fetched on first use
+  if (ctx && ctx.state === 'running' && !VOICE_LINES.includes(key)) {
+    loadOne(ctx, key).then((b) => { if (b) say(key); });
     return;
   }
   // Fallback while clips are still loading, or if Web Audio is unavailable
