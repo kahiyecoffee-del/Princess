@@ -479,3 +479,5 @@ input, select {
 @keyframes tapPulse { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; text-shadow: 0 0 12px rgba(232, 182, 74, 0.8); } }
 .welcome.leaving .home-hero { animation: welcomeOut 0.95s ease-in forwards; }
 @keyframes welcomeOut { 45% { transform: scale(1.03); opacity: 1; } 100% { transform: scale(1.12); opacity: 0; } }
+
+.test-voice { margin-top: 12px; }

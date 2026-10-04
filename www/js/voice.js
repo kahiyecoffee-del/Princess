@@ -1,12 +1,15 @@
-// The princess's voice and the background music.
+// The princess's voice and the background music, built to work on iPhone too.
 //
-// Both use HTML <audio> elements instead of Web Audio: on iPhone, Web Audio is muted
-// by the silent switch, while media elements play like a video does. iOS also only
-// lets a media element play after a tap, so both elements are "unlocked" on the first
-// touch and reused afterwards.
+// iOS rules this file works around:
+//  * Audio may only start inside a tap, and older iOS only accepts "touchend"/"click",
+//    not "pointerdown". So the unlock runs on every tap until audio is really running.
+//  * Web Audio is muted by the silent switch unless an HTML <audio> element is playing.
+//    The music element therefore always plays: the music track, or a silent loop when
+//    the music is turned off. That keeps the princess's voice audible.
+//  * Old Safari's decodeAudioData only supports callbacks, not promises.
 //
-// Voice lines were generated with the open-source Kokoro TTS model (Apache 2.0,
-// voice "af_heart"); the music was composed by tools/compose_music.py.
+// Voice lines: open-source Kokoro TTS (Apache 2.0, voice "af_heart").
+// Music: composed by tools/compose_music.py.
 import { audioContext } from './audio.js';
 
 export const VOICE_LINES = [
@@ -16,87 +19,127 @@ export const VOICE_LINES = [
   'psst', 'giggle1', 'giggle2', 'giggle3', 'yay',
 ];
 
-const voice = new Audio();
-voice.preload = 'auto';
+const SILENCE = 'audio/silence.mp3';
 const music = new Audio();
 music.loop = true;
 music.preload = 'auto';
+music.setAttribute('playsinline', '');
+const fallbackVoice = new Audio(); // used only until the voice clips are decoded
+fallbackVoice.preload = 'auto';
+fallbackVoice.setAttribute('playsinline', '');
 
 let voiceOn = true;
 let musicOn = true;
-let unlocked = false;
 let track = 'menu';
 let musicHeld = false; // paused for an ad or while the app is in the background
+let mediaUnlocked = false;
+let greeted = false;
 
-export function setVoiceEnabled(v) { voiceOn = v; if (!v) voice.pause(); }
-export function setMusicEnabled(v) {
-  musicOn = v;
-  if (v) playMusic(); else music.pause();
+const buffers = new Map();
+let loading = null;
+let current = null;
+
+function decode(ctx, data) {
+  return new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(data, resolve, reject);
+    if (p && typeof p.then === 'function') p.then(resolve, reject);
+  });
+}
+
+export function preloadVoices() {
+  const ctx = audioContext();
+  if (!ctx || loading) return loading;
+  loading = Promise.all(VOICE_LINES.map(async (key) => {
+    try {
+      const res = await fetch(`audio/${key}.mp3`);
+      buffers.set(key, await decode(ctx, await res.arrayBuffer()));
+    } catch { /* that line falls back to the <audio> element */ }
+  }));
+  return loading;
+}
+
+function musicSrc() {
+  return musicOn ? `audio/music-${track}.mp3` : SILENCE;
 }
 
 function playMusic() {
-  if (!musicOn || !unlocked || musicHeld) return;
-  const src = `audio/music-${track}.mp3`;
+  if (musicHeld || !mediaUnlocked) return;
+  const src = musicSrc();
   if (!music.src.endsWith(src)) music.src = src;
   music.volume = 0.7; // ignored on iOS, where the file itself is mixed quietly
   music.play().catch(() => {});
 }
 
-export function setTrack(name) {
-  if (track === name) return;
-  track = name;
-  if (musicOn && unlocked && !musicHeld) {
-    music.pause();
-    music.src = `audio/music-${track}.mp3`;
-    playMusic();
-  }
+export function setVoiceEnabled(v) {
+  voiceOn = v;
+  if (!v) { try { current?.stop(); } catch { /* already stopped */ } fallbackVoice.pause(); }
 }
+export function setMusicEnabled(v) { musicOn = v; playMusic(); }
+export function setTrack(name) { if (track !== name) { track = name; playMusic(); } }
+export function holdMusic(hold) { musicHeld = hold; if (hold) music.pause(); else playMusic(); }
 
-// Pause music while an ad plays or the app is hidden, then resume.
-export function holdMusic(hold) {
-  musicHeld = hold;
-  if (hold) music.pause(); else playMusic();
+export function say(key) {
+  if (!voiceOn) return;
+  const ctx = audioContext();
+  const buf = buffers.get(key);
+  if (ctx && ctx.state === 'running' && buf) {
+    try { current?.stop(); } catch { /* already stopped */ }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    current = src;
+    return;
+  }
+  // Fallback while clips are still loading, or if Web Audio is unavailable
+  fallbackVoice.pause();
+  fallbackVoice.src = `audio/${key}.mp3`;
+  fallbackVoice.play().catch(() => {});
+  preloadVoices();
 }
 
 // A short giggle, at most every 20 seconds so it stays charming.
 let lastGiggle = 0;
 export function giggle() {
-  if (Date.now() - lastGiggle < 20000 || !voice.paused) return;
+  if (Date.now() - lastGiggle < 20000) return;
   lastGiggle = Date.now();
   say(['giggle1', 'giggle2', 'giggle3'][Math.floor(Math.random() * 3)]);
 }
 
-export function say(key) {
-  if (!voiceOn || !unlocked) return;
-  voice.pause();
-  voice.src = `audio/${key}.mp3`;
-  voice.currentTime = 0;
-  voice.play().catch(() => {});
-}
+// The greeting is started inside the first tap itself, which old iOS requires.
+let greetingKey = null;
+export function setGreeting(fn) { greetingKey = fn; }
 
-// First tap anywhere: unlock audio on iOS/Android and start the music.
+// Runs synchronously inside every tap until all audio is unlocked.
+const EVENTS = ['touchend', 'click', 'pointerup', 'keydown'];
 function unlock() {
-  if (unlocked) return;
   try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* iOS 17+ only */ }
   const ctx = audioContext();
-  if (ctx) {
+  if (ctx && ctx.state !== 'running') {
     const b = ctx.createBuffer(1, 1, 22050);
     const s = ctx.createBufferSource();
     s.buffer = b;
     s.connect(ctx.destination);
     s.start(0);
   }
-  voice.src = 'audio/silence.mp3';
-  voice.play().then(() => {
-    unlocked = true;
-    ['pointerdown', 'touchend', 'click', 'keydown'].forEach((e) => removeEventListener(e, unlock, true));
-    playMusic();
-    onUnlock?.();
-  }).catch(() => { /* try again on the next tap */ });
+  if (ctx) preloadVoices();
+  if (!mediaUnlocked && music.paused) {
+    // Both media elements must be started inside the tap itself
+    music.src = musicHeld ? SILENCE : musicSrc();
+    music.play().then(() => {
+      mediaUnlocked = true;
+      if (musicHeld) music.pause();
+      else playMusic();
+    }).catch(() => {});
+    const greet = !greeted && voiceOn ? greetingKey?.() : null;
+    greeted = true;
+    if (fallbackVoice.paused) {
+      fallbackVoice.src = greet ? `audio/${greet}.mp3` : SILENCE;
+      fallbackVoice.play().catch(() => {});
+    }
+  }
+  if (mediaUnlocked && ctx && ctx.state === 'running') EVENTS.forEach((e) => removeEventListener(e, unlock, true));
 }
-['pointerdown', 'touchend', 'click', 'keydown'].forEach((e) => addEventListener(e, unlock, true));
-
-let onUnlock = null;
-export function whenUnlocked(fn) { if (unlocked) fn(); else onUnlock = fn; }
+EVENTS.forEach((e) => addEventListener(e, unlock, true));
 
 document.addEventListener('visibilitychange', () => holdMusic(document.hidden));
