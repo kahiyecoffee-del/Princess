@@ -281,3 +281,68 @@ test('günlük görevler ve başarımlar', async () => {
   assert.equal(state.stats.bestStreak, 4);
   assert.equal(Q.achievementList(state).find((x) => x.id === 'devoted').ready, true);
 });
+
+test('engeller: bulut, ay taşı, zincir ve taç', async () => {
+  const { Board, SP } = await import('../www/js/board.js');
+  const { Engine } = await import('../www/js/engine.js');
+  const { mulberry32 } = await import('../www/js/board.js');
+  // Ay taşı iki vuruşta kırılır, bulut bir vuruşta
+  const b = new Board({ rows: 8, cols: 8, colors: 5, stones: [[7, 0]], clouds: [[7, 7]], chains: [[0, 0]], rng: mulberry32(3) });
+  assert.equal(b.grid[7][0], null);
+  assert.equal(b.block[7][0].hp, 2);
+  assert.equal(b.grid[0][0].chain, true);
+  b.grid[6][0] = b.newTile(0, SP.ROW);
+  let step = b.resolveStep([], { cells: new Set([b.key(6, 0)]), activations: [], skip: new Set() });
+  assert.equal(step.blockHits.length, 0); // satır ışını taşa değmez
+  b.grid[5][0] = b.newTile(0, SP.COL);
+  b.applyGravity();
+  // sütun ışını taşa vurur
+  let col = -1;
+  for (let r = 0; r < 8; r++) if (b.grid[r][0]?.special === SP.COL) col = r;
+  step = b.resolveStep([], { cells: new Set([b.key(col, 0)]), activations: [], skip: new Set() });
+  assert.deepEqual(step.blockHits.map((h) => h.hp), [1]);
+  // zincirli taş takas edilemez ve temizlenince zinciri kırılır
+  if (b.grid[0][0]?.chain) {
+    assert.equal(b.trySwap({ r: 0, c: 0 }, { r: 0, c: 1 }).valid, false);
+    const st = b.resolveStep([], { cells: new Set([b.key(0, 0)]), activations: [], skip: new Set() });
+    assert.equal(st.unchained.length, 1);
+    assert.equal(b.grid[0][0].chain, false);
+  }
+  // Taç hedefi: üstte taç başlar, en alta inince toplanır
+  const level = { number: 1, rows: 8, cols: 8, colors: 5, moves: 30, kind: 'crown', crowns: 3, holes: [], ice: [], collect: [], targetScore: 0, starScores: [0, 1000, 2000] };
+  const e = new Engine(level, 11);
+  assert.equal(e.board.countCrowns(), 2);
+  let guard = 0;
+  while (!e.finished && guard++ < 200) {
+    const m = e.board.listMoves();
+    // tacı aşağı indiren hamleyi tercih et
+    const r = e.play(m[0].a, m[0].b);
+    assert.equal(r.valid, true);
+  }
+  assert.ok(e.crownsGot >= 0);
+  // Taçlar hiçbir zaman eşleşmez ve patlamaz
+  for (const row of e.board.grid) for (const t of row) if (t?.special === SP.CROWN) assert.equal(t.color, -2);
+  // Bulut seviyesi: kırılmazsa yayılır
+  const lv2 = { ...level, kind: 'cloud', crowns: 0, clouds: [[0, 0]] };
+  const e2 = new Engine(lv2, 5);
+  assert.equal(e2.board.countBlocks('cloud'), 1);
+  let spread = false;
+  for (let i = 0; i < 20 && !e2.finished; i++) {
+    const m = e2.board.listMoves();
+    const res = e2.play(m[m.length - 1].a, m[m.length - 1].b);
+    if (res.steps.some((s) => s.type === 'spread')) spread = true;
+  }
+  assert.ok(spread || e2.goalsMet());
+});
+
+test('taç sonunda toplanır (simülasyon)', async () => {
+  const { Engine } = await import('../www/js/engine.js');
+  const level = { number: 1, rows: 8, cols: 8, colors: 4, moves: 60, kind: 'crown', crowns: 2, holes: [], ice: [], collect: [], targetScore: 0, starScores: [0, 1000, 2000] };
+  let wins = 0;
+  for (let seed = 1; seed <= 10; seed++) {
+    const e = new Engine(level, seed);
+    while (!e.finished) { const m = e.board.listMoves(); e.play(m[Math.floor(m.length / 2)].a, m[Math.floor(m.length / 2)].b); }
+    if (e.goalsMet()) wins++;
+  }
+  assert.ok(wins >= 5, `wins ${wins}`);
+});

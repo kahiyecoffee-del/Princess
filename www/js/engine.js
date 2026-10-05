@@ -6,6 +6,8 @@ export const SPECIAL_BONUS = { [SP.ROW]: 60, [SP.COL]: 60, [SP.BOMB]: 120, [SP.R
 export const POINTS_PER_TILE = 20;
 export const LEFTOVER_MOVE_BONUS = 250;
 export const FINALE_MOVE_BONUS = 100;
+export const CROWN_POINTS = 500;
+export const BLOCK_POINTS = 40;
 
 export class Engine {
   constructor(level, seed = Date.now()) {
@@ -16,8 +18,15 @@ export class Engine {
       colors: level.colors,
       holes: level.holes,
       ice: level.ice,
+      clouds: level.clouds || [],
+      stones: level.stones || [],
+      chains: level.chains || [],
       rng: mulberry32(seed),
     });
+    this.crownsGot = 0;
+    this.crownsNeeded = level.crowns || 0;
+    if (this.crownsNeeded) this.dropInitialCrowns();
+    this.startClouds = this.board.countBlocks('cloud');
     this.score = 0;
     this.movesLeft = level.moves;
     this.movesUsed = 0;
@@ -25,6 +34,18 @@ export class Engine {
     for (const g of level.collect) this.collected[g.color] = 0;
     this.iceLeft = this.countIce();
     this.finished = false;
+  }
+
+  // Başlangıçta üst sıraya en fazla iki taç konur, kalanlar sonradan yukarıdan düşer.
+  dropInitialCrowns() {
+    const b = this.board;
+    const cols = [...Array(b.cols).keys()].filter((c) => b.holds(0, c) && b.grid[0][c] && !b.grid[0][c].chain);
+    const first = Math.min(b.maxCrownsOnBoard, this.crownsNeeded, cols.length);
+    for (let i = 0; i < first; i++) {
+      const c = cols.splice(Math.floor(b.rng() * cols.length), 1)[0];
+      b.grid[0][c] = b.newTile(-2, SP.CROWN);
+    }
+    b.crownsPending = this.crownsNeeded - first;
   }
 
   countIce() {
@@ -37,6 +58,8 @@ export class Engine {
     const L = this.level;
     if (L.kind === 'score') return this.score >= L.targetScore;
     if (L.kind === 'collect') return L.collect.every((g) => this.collected[g.color] >= g.count);
+    if (L.kind === 'cloud') return this.board.countBlocks('cloud') === 0;
+    if (L.kind === 'crown') return this.crownsGot >= this.crownsNeeded;
     return this.iceLeft === 0;
   }
 
@@ -55,6 +78,8 @@ export class Engine {
       const got = L.collect.reduce((s, g) => s + Math.min(g.count, this.collected[g.color]), 0);
       return got / total;
     }
+    if (L.kind === 'cloud') return this.startClouds ? Math.max(0, 1 - this.board.countBlocks('cloud') / this.startClouds) : 1;
+    if (L.kind === 'crown') return Math.min(1, this.crownsGot / this.crownsNeeded);
     const start = L.ice.reduce((s, [, , l = 1]) => s + l, 0);
     return start ? 1 - this.iceLeft / start : 1;
   }
@@ -75,6 +100,16 @@ export class Engine {
     const steps = [{ type: 'swap', a, b }];
     const preferred = [this.board.key(a.r, a.c), this.board.key(b.r, b.c)];
     const cascade = this.resolveAll(steps, preferred, res.forced);
+    // Hamlede hiç bulut kırılmadıysa fırtına yayılır
+    const cloudHit = steps.some((st) => st.type === 'clear' && st.blockHits.some((h) => h.type === 'cloud'));
+    if (!this.goalsMet() && !cloudHit && this.board.countBlocks('cloud')) {
+      const spread = this.board.spreadCloud();
+      if (spread && this.board.hasPossibleMove()) steps.push({ type: 'spread', ...spread });
+      else if (spread) { // tahtayı kilitlemesin: geri al
+        this.board.block[spread.r][spread.c] = null;
+        this.board.grid[spread.r][spread.c] = spread.tile;
+      }
+    }
     return { valid: true, steps, cascade };
   }
 
@@ -84,10 +119,19 @@ export class Engine {
     for (let guard = 0; guard < 60; guard++) {
       const step = this.board.resolveStep(cascade === 0 ? preferred : [], forced);
       forced = null;
-      if (!step) break;
+      if (!step) {
+        const got = this.board.collectCrowns();
+        if (!got.length) break;
+        this.crownsGot += got.length;
+        this.score += got.length * CROWN_POINTS;
+        steps.push({ type: 'collect', got, points: got.length * CROWN_POINTS, score: this.score });
+        steps.push({ type: 'fall', ...this.board.applyGravity() });
+        continue;
+      }
       cascade++;
       let points = step.cleared.length * POINTS_PER_TILE * cascade;
       for (const cr of step.created) points += SPECIAL_BONUS[cr.tile.special] || 0;
+      points += step.blockHits.length * BLOCK_POINTS;
       for (const { tile } of step.cleared) {
         if (tile.special !== SP.RAINBOW && tile.color in this.collected) this.collected[tile.color]++;
       }
@@ -106,7 +150,7 @@ export class Engine {
 
   // Güçlendirici: Kraliyet Asası. Seçilen taşı hamle harcamadan kırar.
   useWand(r, c) {
-    if (this.finished || !this.board.playable(r, c) || !this.board.grid[r][c]) return { valid: false };
+    if (this.finished || !this.board.playable(r, c) || (!this.board.grid[r][c] && !this.board.isBlock(r, c))) return { valid: false };
     const forced = { cells: new Set([this.board.key(r, c)]), activations: [], skip: new Set() };
     const steps = [];
     const cascade = this.resolveAll(steps, [], forced);
@@ -121,7 +165,7 @@ export class Engine {
     for (let r = 0; r < b.rows; r++) {
       for (let c = 0; c < b.cols; c++) {
         const t = b.grid[r][c];
-        if (t && t.special === SP.NONE) cells.push([r, c]);
+        if (t && t.special === SP.NONE && !t.chain) cells.push([r, c]);
       }
     }
     const placed = [];
@@ -147,7 +191,7 @@ export class Engine {
     for (let r = 0; r < b.rows; r++) {
       for (let c = 0; c < b.cols; c++) {
         const t = b.grid[r][c];
-        if (t && t.special === SP.NONE && t.color >= 0) cells.push([r, c]);
+        if (t && t.special === SP.NONE && t.color >= 0 && !t.chain) cells.push([r, c]);
       }
     }
     const placed = [];

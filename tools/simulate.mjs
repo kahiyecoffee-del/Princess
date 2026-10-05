@@ -7,7 +7,8 @@ import { getLevel } from '../www/js/levels.js';
 function cloneBoard(b) {
   const nb = Object.create(Board.prototype);
   Object.assign(nb, b);
-  nb.grid = b.grid.map((row) => row.slice());
+  nb.grid = b.grid.map((row) => row.map((t) => t && { ...t }));
+  nb.block = b.block.map((row) => row.map((x) => x && { ...x }));
   nb.ice = b.ice.map((row) => row.slice());
   nb.rng = Math.random;
   return nb;
@@ -22,6 +23,13 @@ function evaluate(engine, move) {
   let v = step.cleared.length + step.created.length * 4;
   const L = engine.level;
   if (L.kind === 'ice') v += step.iceBroken.length * 3;
+  v += step.blockHits.length * (L.kind === 'cloud' ? 4 : 1) + step.unchained.length;
+  if (L.kind === 'crown') {
+    // Bir tacın altındaki taşları temizlemek onu aşağı indirir
+    for (const { r, c } of step.cleared) {
+      for (let rr = r - 1; rr >= 0; rr--) if (engine.board.grid[rr][c]?.special === SP.CROWN) { v += 3; break; }
+    }
+  }
   if (L.kind === 'collect') {
     for (const { tile } of step.cleared) {
       const g = L.collect.find((x) => x.color === tile.color);

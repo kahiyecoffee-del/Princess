@@ -377,9 +377,125 @@ function drawCelestialOrb(ctx, S, time) {
   ring(0.7, 2, true);
 }
 
+// Royal crown item that must be brought down to the bottom of the board
+export function drawCrownItem(ctx, S, time = 0) {
+  const r = S * 0.4;
+  ctx.save();
+  ctx.translate(0, Math.sin(time / 320) * S * 0.02);
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 1.25);
+  glow.addColorStop(0, 'rgba(255,226,140,0.55)');
+  glow.addColorStop(1, 'rgba(255,226,140,0)');
+  ctx.fillStyle = glow;
+  ctx.beginPath(); ctx.arc(0, 0, r * 1.25, 0, Math.PI * 2); ctx.fill();
+  const g = ctx.createLinearGradient(0, -r, 0, r);
+  g.addColorStop(0, '#fff4c8'); g.addColorStop(0.45, '#f2c24e'); g.addColorStop(1, '#a86a12');
+  ctx.fillStyle = g;
+  ctx.strokeStyle = '#6b3f08';
+  ctx.lineWidth = Math.max(1, S * 0.025);
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.9, r * 0.55);
+  ctx.lineTo(-r, -r * 0.45); ctx.lineTo(-r * 0.45, r * 0.05);
+  ctx.lineTo(0, -r * 0.75); ctx.lineTo(r * 0.45, r * 0.05);
+  ctx.lineTo(r, -r * 0.45); ctx.lineTo(r * 0.9, r * 0.55);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillRect(-r * 0.9, r * 0.55, r * 1.8, r * 0.25);
+  ctx.strokeRect(-r * 0.9, r * 0.55, r * 1.8, r * 0.25);
+  const gems = [[-r, -r * 0.45, '#ff6f9a'], [0, -r * 0.75, '#7fb4ff'], [r, -r * 0.45, '#ff6f9a'], [0, r * 0.67, '#b98bff']];
+  for (const [x, y, col] of gems) {
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(x, y, r * 0.13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)';
+    ctx.beginPath(); ctx.arc(x - r * 0.04, y - r * 0.04, r * 0.045, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.45)';
+  ctx.beginPath(); ctx.ellipse(-r * 0.35, -r * 0.05, r * 0.12, r * 0.3, 0.5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+// Golden chain wrapped across a locked jewel
+export function drawChains(ctx, S) {
+  ctx.save();
+  ctx.lineWidth = Math.max(1.5, S * 0.05);
+  for (const dir of [1, -1]) {
+    for (let i = -2; i <= 2; i++) {
+      const x = i * S * 0.17;
+      const y = i * S * 0.17 * dir;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(dir * Math.PI / 4 + (i % 2 ? Math.PI / 2 : 0));
+      ctx.strokeStyle = '#5a3a0c';
+      ctx.beginPath(); ctx.ellipse(0, 0, S * 0.11, S * 0.065, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = i % 2 ? '#ffe7a3' : '#e0a93a';
+      ctx.lineWidth = Math.max(1, S * 0.03);
+      ctx.beginPath(); ctx.ellipse(0, 0, S * 0.11, S * 0.065, 0, 0, Math.PI * 2); ctx.stroke();
+      ctx.lineWidth = Math.max(1.5, S * 0.05);
+      ctx.restore();
+    }
+  }
+  // padlock
+  ctx.fillStyle = '#e8b64a'; ctx.strokeStyle = '#5a3a0c'; ctx.lineWidth = Math.max(1, S * 0.02);
+  ctx.beginPath(); ctx.arc(0, -S * 0.04, S * 0.07, Math.PI, 0); ctx.stroke();
+  roundRect(ctx, -S * 0.1, -S * 0.04, S * 0.2, S * 0.15, S * 0.03); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+// Storm cloud (spreads) and moon stone (two hits)
+export function drawBlocker(ctx, b, S, time = 0) {
+  ctx.save();
+  if (b.type === 'cloud') {
+    const bob = Math.sin(time / 500 + b.seed) * S * 0.025;
+    ctx.translate(0, bob);
+    const puffs = [[-0.2, 0.06, 0.24], [0.18, 0.08, 0.22], [0, -0.1, 0.27], [-0.3, 0.16, 0.15], [0.32, 0.17, 0.14]];
+    ctx.fillStyle = 'rgba(30,18,64,0.55)';
+    for (const [x, y, r] of puffs) { ctx.beginPath(); ctx.arc(x * S, (y + 0.06) * S, r * S, 0, Math.PI * 2); ctx.fill(); }
+    for (const [x, y, r] of puffs) {
+      const g = ctx.createRadialGradient(x * S - r * S * 0.3, y * S - r * S * 0.4, r * S * 0.1, x * S, y * S, r * S);
+      g.addColorStop(0, '#b9a6e8'); g.addColorStop(0.6, '#6a52b0'); g.addColorStop(1, '#3a2a78');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x * S, y * S, r * S, 0, Math.PI * 2); ctx.fill();
+    }
+    const flash = (Math.sin(time / 230 + b.seed * 3) + 1) / 2;
+    ctx.globalAlpha = 0.55 + flash * 0.45;
+    ctx.fillStyle = '#ffe680';
+    ctx.beginPath();
+    ctx.moveTo(S * 0.04, S * 0.05); ctx.lineTo(-S * 0.07, S * 0.24); ctx.lineTo(0, S * 0.23);
+    ctx.lineTo(-S * 0.04, S * 0.38); ctx.lineTo(S * 0.1, S * 0.17); ctx.lineTo(S * 0.02, S * 0.18); ctx.closePath();
+    ctx.fill();
+  } else {
+    const r = S * 0.42;
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.1, 0, 0, r);
+    g.addColorStop(0, '#f1ecff'); g.addColorStop(0.55, '#a59cc8'); g.addColorStop(1, '#4f4878');
+    ctx.fillStyle = g;
+    ctx.strokeStyle = 'rgba(255,240,200,0.55)';
+    ctx.lineWidth = Math.max(1, S * 0.025);
+    ctx.beginPath();
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2;
+      const rr = r * (0.9 + ((i * 37) % 10) / 100);
+      if (i) ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); else ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // engraved crescent moon
+    ctx.fillStyle = 'rgba(255,233,168,0.85)';
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.38, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#8d84b8';
+    ctx.beginPath(); ctx.arc(r * 0.15, -r * 0.1, r * 0.33, 0, Math.PI * 2); ctx.fill();
+    if (b.hp < 2) {
+      ctx.strokeStyle = '#2a2448';
+      ctx.lineWidth = Math.max(1.2, S * 0.03);
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.7, -r * 0.5); ctx.lineTo(-r * 0.25, -r * 0.1); ctx.lineTo(-r * 0.4, r * 0.25); ctx.lineTo(0, r * 0.75);
+      ctx.moveTo(-r * 0.25, -r * 0.1); ctx.lineTo(r * 0.3, -r * 0.6);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 // Draws a whole jewel (normal or special). `sprites` are cached normal gems.
 export function drawJewel(ctx, tile, S, time = 0, sprites = null) {
   const sp = tile.special;
+  if (sp === SP.CROWN) { drawCrownItem(ctx, S, time); return; }
   if (sp === SP.RAINBOW) { drawCelestialOrb(ctx, S, time); return; }
   if (sp === SP.BOMB) drawStarFrame(ctx, tile.color, S, time);
   if (sprites) ctx.drawImage(sprites[tile.color], -S / 2, -S / 2, S, S);
@@ -440,11 +556,13 @@ export class Renderer {
   rebuild(intro = false) {
     this.visuals.clear();
     const b = this.engine.board;
+    // Engellerin görsel kopyası: animasyonla eş zamanlı güncellenir
+    this.blockView = b.block.map((row, r) => row.map((x, c) => x && { ...x, seed: r * 3.1 + c * 1.7, scale: 1 }));
     for (let r = 0; r < b.rows; r++) {
       for (let c = 0; c < b.cols; c++) {
         const t = b.grid[r][c];
         if (!t) continue;
-        const v = { tile: t, x: c, y: intro ? r - b.rows - 1 : r, scale: 1, alpha: 1 };
+        const v = { tile: t, x: c, y: intro ? r - b.rows - 1 : r, scale: 1, alpha: 1, chained: !!t.chain };
         this.visuals.set(t.id, v);
         if (intro) this.tween(v, { y: r }, 500 + r * 30 + c * 15, easeOutBounce);
       }
@@ -592,6 +710,23 @@ export class Renderer {
         (this.hint.b.r === Math.round(v.y) && this.hint.b.c === Math.round(v.x)))) scale *= 1 + hintPulse * 0.12;
       this.drawTile(v, scale);
     }
+    for (let r = 0; r < b.rows; r++) {
+      for (let c = 0; c < b.cols; c++) {
+        const bv = this.blockView?.[r][c];
+        if (!bv || bv.scale <= 0.01) continue;
+        const [cx, cy] = this.cellCenter(r, c);
+        // opaque cell behind so tiles passing through are hidden
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, bv.scale);
+        ctx.fillStyle = bv.type === 'cloud' ? 'rgba(20,14,52,0.92)' : 'rgba(26,22,58,0.92)';
+        roundRect(ctx, cx - S / 2 + 1.5, cy - S / 2 + 1.5, S - 3, S - 3, S * 0.14);
+        ctx.fill();
+        ctx.translate(cx, cy);
+        ctx.scale(bv.scale, bv.scale);
+        drawBlocker(ctx, bv, S, this.time);
+        ctx.restore();
+      }
+    }
     ctx.restore();
 
     // Işınlar (çizgi temizleme)
@@ -671,6 +806,7 @@ export class Renderer {
     ctx.translate(x + S / 2, y + S / 2);
     ctx.scale(scale, scale);
     drawJewel(ctx, v.hideSpecial ? { ...t, special: 0 } : t, S, this.time, this.sprites);
+    if (v.chained) drawChains(ctx, S);
     ctx.restore();
   }
 
@@ -721,6 +857,8 @@ export class Renderer {
     }
     for (const step of steps) {
       if (step.type === 'convert') await this.animateConvert(step);
+      else if (step.type === 'collect') await this.animateCollect(step);
+      else if (step.type === 'spread') await this.animateSpread(step);
       else if (step.type === 'swap') await this.animateSwap(step.a, step.b);
       else if (step.type === 'clear') await this.animateClear(step);
       else if (step.type === 'fall') await this.animateFall(step);
@@ -788,6 +926,28 @@ export class Renderer {
       }
       this.onSound('ice');
     }
+    for (const { r, c, type, hp } of step.blockHits || []) {
+      const bv = this.blockView[r][c];
+      const [x, y] = this.cellCenter(r, c);
+      for (let i = 0; i < 12; i++) {
+        this.particles.push({
+          x, y, vx: (Math.random() - 0.5) * 7, vy: (Math.random() - 0.8) * 6, grav: 0.22, size: S * (0.05 + Math.random() * 0.06),
+          star: type === 'cloud', rot: 0, vr: 0.2, color: type === 'cloud' ? (Math.random() < 0.5 ? '#b9a6e8' : '#ffe680') : '#c9c2e6', life: 700, max: 700,
+        });
+      }
+      if (bv) {
+        bv.hp = hp;
+        if (hp <= 0) p.push(this.tween(bv, { scale: 0 }, 260).then(() => { this.blockView[r][c] = null; }));
+        else { bv.scale = 1.15; this.tween(bv, { scale: 1 }, 200); }
+      }
+      this.onSound(type === 'cloud' ? 'ice' : 'bomb');
+    }
+    for (const { r, c, tile } of step.unchained || []) {
+      const v = this.visuals.get(tile.id);
+      if (v) v.chained = false;
+      this.burst(r, c, -1, 12, 1);
+      this.onSound('ice');
+    }
     const n = step.cleared.length || 1;
     const [tx, ty] = this.cellCenter(sx / n, sy / n);
     this.floatText(`+${step.points}`, tx, ty, Math.max(16, S * 0.4), '#ffd77a', 900);
@@ -849,6 +1009,33 @@ export class Renderer {
       await this.wait(90);
     }
     await this.wait(250);
+  }
+
+  // Crowns reaching the bottom fly up and away in a shower of gold
+  async animateCollect(step) {
+    const p = [];
+    for (const { r, c, tile } of step.got) {
+      const v = this.visuals.get(tile.id);
+      const [x, y] = this.cellCenter(r, c);
+      this.rings.push({ x, y, radius: this.cell * 1.4, life: 600, max: 600, rgb: '255,226,140' });
+      this.burst(r, c, 1, 24, 1.5);
+      this.floatText(`+${Math.round(step.points / step.got.length)}`, x, y - this.cell * 0.4, Math.max(16, this.cell * 0.4), '#ffd77a', 900);
+      if (v) p.push(this.tween(v, { y: r - 2.5, scale: 1.5, alpha: 0 }, 650, easeInOut).then(() => this.visuals.delete(tile.id)));
+    }
+    this.onSound('win');
+    await Promise.all(p);
+  }
+
+  // A storm cloud swallows a neighbouring jewel
+  async animateSpread(step) {
+    const v = this.visuals.get(step.tile.id);
+    const bv = { type: 'cloud', hp: 1, seed: step.r * 3.1 + step.c * 1.7, scale: 0 };
+    this.blockView[step.r][step.c] = bv;
+    this.onSound('invalid');
+    await Promise.all([
+      this.tween(bv, { scale: 1 }, 380, easeOutBack),
+      v ? this.tween(v, { scale: 0, alpha: 0 }, 300).then(() => this.visuals.delete(step.tile.id)) : null,
+    ]);
   }
 
   // Seviye sonu "yıldız yağmuru": kalan her hamle için tahtada parıltı

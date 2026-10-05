@@ -1,6 +1,6 @@
 import { Engine } from './engine.js';
 import { getLevel, LEVEL_COUNT } from './levels.js';
-import { Renderer, drawGem, drawJewel } from './render.js';
+import { Renderer, drawGem, drawJewel, drawCrownItem, drawBlocker, drawChains } from './render.js';
 import { SP } from './board.js';
 import {
   streakBonus, festivalState, addShards, claimFestival, FESTIVAL_MILESTONES, FESTIVAL_COIN_MULTIPLIER,
@@ -135,6 +135,26 @@ function toast(text, ms = 2200) {
   document.body.append(el);
   setTimeout(() => el.remove(), ms);
 }
+
+// Small canvas icon drawn with one of the board painters (centered at 0,0, size S)
+function paintIcon(paint, px = 44) {
+  const c = document.createElement('canvas');
+  const dpr = window.devicePixelRatio || 1;
+  c.width = c.height = Math.round(px * dpr);
+  c.style.width = c.style.height = `${px}px`;
+  c.className = 'gem-icon';
+  const ctx = c.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.translate(px / 2, px / 2);
+  paint(ctx, px);
+  return c;
+}
+const OBSTACLE_ICONS = {
+  crown: (px) => paintIcon((ctx, S) => drawCrownItem(ctx, S), px),
+  cloud: (px) => paintIcon((ctx, S) => drawBlocker(ctx, { type: 'cloud', hp: 1, seed: 0 }, S, 0), px),
+  stone: (px) => paintIcon((ctx, S) => drawBlocker(ctx, { type: 'stone', hp: 2 }, S), px),
+  chain: (px) => paintIcon((ctx, S) => { ctx.save(); ctx.translate(-S / 2, -S / 2); drawGem(ctx, 2, S); ctx.restore(); drawChains(ctx, S); }, px),
+};
 
 function gemIcon(color, px = 44) {
   const c = document.createElement('canvas');
@@ -705,6 +725,33 @@ async function startLevel(n) {
     }
     intro.append(row);
   }
+  if (level.kind === 'crown' || level.kind === 'cloud') {
+    const row = document.createElement('div');
+    row.className = 'goal-intro';
+    const item = document.createElement('div');
+    item.append(OBSTACLE_ICONS[level.kind](44));
+    item.append(document.createTextNode(`× ${level.kind === 'crown' ? level.crowns : level.clouds.length}`));
+    row.append(item);
+    intro.append(row);
+  }
+  // First time an obstacle shows up, the princess explains it
+  state.seenTips ||= [];
+  const features = [];
+  if (level.kind === 'crown') features.push('crown');
+  if (level.clouds?.length) features.push('cloud');
+  if (level.stones?.length) features.push('stone');
+  if (level.chains?.length) features.push('chain');
+  for (const f of features) {
+    if (state.seenTips.includes(f)) continue;
+    state.seenTips.push(f);
+    const tip = document.createElement('div');
+    tip.className = 'obstacle-tip';
+    tip.append(OBSTACLE_ICONS[f](36));
+    const txt = document.createElement('span');
+    txt.innerHTML = `<b>${t(`ob_${f}`)}</b><br>${t(`ob_${f}_tip`)}`;
+    tip.append(txt);
+    intro.append(tip);
+  }
   const info = document.createElement('p');
   info.innerHTML = `${t('movesCount', { n: level.moves })}${level.hard ? `<br>⚡ <b>${t('hardLevel')}</b>` : ''}`;
   intro.append(info);
@@ -803,6 +850,13 @@ function buildGoalsUI() {
     }
   } else if (L.kind === 'ice') {
     wrap.innerHTML = '<span class="goal" data-ice>🧊 <b></b></span>';
+  } else if (L.kind === 'crown' || L.kind === 'cloud') {
+    const el = document.createElement('span');
+    el.className = 'goal';
+    el.dataset.obstacle = L.kind;
+    el.append(OBSTACLE_ICONS[L.kind](26));
+    el.append(document.createElement('b'));
+    wrap.append(el);
   } else {
     wrap.innerHTML = `<span class="goal">${CROWN_ICON}<b>${fmt(L.targetScore)}</b></span>`;
   }
@@ -849,6 +903,11 @@ function updateHUD(shownScore = engine.score) {
     const el = $('#hud-goals [data-ice]');
     el.querySelector('b').textContent = engine.iceLeft === 0 ? '✓' : engine.iceLeft;
     el.classList.toggle('done', engine.iceLeft === 0);
+  } else if (L.kind === 'crown' || L.kind === 'cloud') {
+    const left = L.kind === 'crown' ? Math.max(0, engine.crownsNeeded - engine.crownsGot) : engine.board.countBlocks('cloud');
+    const el = $('#hud-goals [data-obstacle]');
+    el.querySelector('b').textContent = left === 0 ? '✓' : left;
+    el.classList.toggle('done', left === 0);
   }
   const max = L.starScores[2];
   $('#hud-progress').style.width = `${Math.min(100, (shownScore / max) * 100)}%`;
@@ -1234,4 +1293,4 @@ $('#screen-home').addEventListener('click', () => {
 });
 
 // For tests and debugging
-window.__game = { state, get engine() { return engine; }, renderer, startLevel, get adClock() { return adClock; }, set adClock(v) { adClock = v; } };
+window.__game = { state, get engine() { return engine; }, renderer, startLevel, show, get adClock() { return adClock; }, set adClock(v) { adClock = v; } };
