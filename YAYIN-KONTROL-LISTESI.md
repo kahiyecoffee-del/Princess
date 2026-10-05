@@ -44,7 +44,7 @@ Kimlikler **birebir** aynı olmalı:
 
 ## 5. Mağaza sayfası
 - [ ] Uygulama adı, kısa ve uzun açıklama (İngilizce + Türkçe, İspanyolca, Portekizce)
-- [ ] Görseller: `store/` klasöründe hazır (ikon 512, öne çıkan görsel 1024×500, 4 ekran görüntüsü)
+- [ ] Görseller: `store/` klasöründe hazır (ikon 512, öne çıkan görsel 1024×500, 5 ekran görüntüsü)
 - [ ] **Gizlilik politikası** sayfası (AdMob, satın alma ve bildirimler nedeniyle zorunlu). Claude hazırlayıp GitHub Pages'te yayınlayabilir
 - [ ] İçerik derecelendirmesi anketi ("simüle kumar": Hayır)
 - [ ] Hedef kitle: 13+ (çocuklara yönelik değil)

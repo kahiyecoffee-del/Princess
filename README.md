@@ -71,12 +71,12 @@ yalnızca GitHub'ın gizli kasasında (Secrets) durur.
 ### 2. Uygulamayı derle
 **Actions → Android derlemesi → Run workflow**. 5-10 dakika sürer. Bittiğinde depo sayfasındaki **Releases**
 bölümünde `gokyuzu-prensesi-N.aab` dosyası çıkar; dokunup **Dosyalar**'a indir.
-Kodda her değişiklikte derleme kendiliğinden de çalışır ve sürüm numarası otomatik artar.
+Derleme GitHub kotasını korumak için yalnızca elle başlatılır (yukarıdaki adım ya da Claude'a "Android derlemesini başlat" demek); sürüm numarası her derlemede otomatik artar.
 
 ### 3. Google Play Console
 1. `play.google.com/console` → geliştirici hesabı aç (tek seferlik 25 $, kimlik doğrulama istenir).
 2. **Uygulama oluştur** → ad: Gökyüzü Prensesi, tür: Oyun, ücretsiz.
-3. **Mağaza girişi**: `store/` klasöründeki ikon (512), öne çıkan görsel (1024×500) ve 4 ekran görüntüsünü yükle.
+3. **Mağaza girişi**: `store/` klasöründeki ikon (512), öne çıkan görsel (1024×500) ve 5 ekran görüntüsünü (JPEG) yükle.
 4. **Test → Kapalı test** → yeni sürüm → indirdiğin `.aab` dosyasını yükle.
 5. ⚠️ **Yeni kişisel hesaplar** için Google kuralı: üretime (herkese açık) geçmeden önce **en az 12 kişinin
    14 gün boyunca kapalı testte** olması gerekir. Test edenlerin **Android telefonu** olmalı.

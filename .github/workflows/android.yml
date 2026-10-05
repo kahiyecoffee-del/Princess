@@ -1,5 +1,6 @@
 # Google Play'e yüklenecek .aab dosyasını GitHub sunucularında derler.
-# Bilgisayar gerekmez: her "master" güncellemesinde veya Actions sekmesinden elle çalışır.
+# Bilgisayar gerekmez. GitHub kotasını korumak için yalnızca elle çalışır:
+# Actions → "Android derlemesi" → Run workflow (veya Claude'a "Android derlemesini başlat" deyin).
 # Gerekli gizli anahtarlar (Settings → Secrets and variables → Actions):
 #   KEYSTORE_BASE64      : yükleme anahtarı (.jks) dosyasının base64 hali
 #   KEYSTORE_PASSWORD    : anahtarın şifresi
@@ -8,9 +9,6 @@
 name: Android derlemesi
 
 on:
-  push:
-    branches: [master]
-    paths: ['www/**', 'android/**', 'package.json', 'package-lock.json', 'capacitor.config.json', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:

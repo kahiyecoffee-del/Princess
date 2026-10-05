@@ -3,7 +3,8 @@
 // Kullanım: npx playwright ... gerektirir → node tools/make-assets.mjs
 // (Playwright kurulu değilse: npm i -D playwright)
 import { chromium } from 'playwright';
-import { readFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, mkdirSync, unlinkSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -68,7 +69,11 @@ const splashSizes = {
 };
 for (const [f, [w, h]] of Object.entries(splashSizes)) {
   const m = Math.min(w, h);
-  await shot(`${res}/${f}`, w, h, page(w, h, `${stars(Math.round((w * h) / 6000), w, h)}<div class="c">${face(Math.round(m * 0.42))}</div>`));
+  const png = `${res}/${f}`;
+  await shot(png, w, h, page(w, h, `${stars(Math.round((w * h) / 6000), w, h)}<div class="c">${face(Math.round(m * 0.42))}</div>`));
+  // WebP: aynı görüntü, PNG'nin ~1/20'si boyutunda (uygulama indirmesi küçülür)
+  execFileSync('python3', ['-c', 'import sys;from PIL import Image;Image.open(sys.argv[1]).convert("RGB").save(sys.argv[2],"WEBP",quality=85,method=6)', png, png.replace(/\.png$/, '.webp')]);
+  unlinkSync(png);
 }
 
 // Google Play mağaza görselleri
