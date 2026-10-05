@@ -17,7 +17,7 @@ export function mulberry32(seed) {
 let nextTileId = 1;
 
 export class Board {
-  constructor({ rows = 8, cols = 8, colors = 5, holes = [], ice = [], rng = Math.random }) {
+  constructor({ rows = 8, cols = 8, colors = 5, holes = [], ice = [], clouds = [], stones = [], chains = [], rng = Math.random }) {
     this.rows = rows;
     this.cols = cols;
     this.colors = colors;
@@ -27,8 +27,31 @@ export class Board {
     for (const [r, c, layers = 1] of ice) {
       if (!this.isHole(r, c)) this.ice[r][c] = layers;
     }
+    // Engeller: fırtına bulutu (1 vuruş, yayılır) ve ay taşı (2 vuruş). Taş tutmazlar.
+    this.block = Array.from({ length: rows }, () => new Array(cols).fill(null));
+    for (const [r, c] of clouds) if (!this.isHole(r, c)) this.block[r][c] = { type: 'cloud', hp: 1 };
+    for (const [r, c] of stones) if (!this.isHole(r, c)) this.block[r][c] = { type: 'stone', hp: 2 };
+    this.chainCells = chains.filter(([r, c]) => !this.isHole(r, c) && !this.block[r][c]);
+    this.crownsPending = 0; // engine sets how many crowns may still drop in
+    this.maxCrownsOnBoard = 2;
     this.grid = Array.from({ length: rows }, () => new Array(cols).fill(null));
     this.fillInitial();
+  }
+
+  isBlock(r, c) { return this.inBounds(r, c) && !!this.block[r][c]; }
+  // Taş tutabilen hücre (boşluk veya engel değil)
+  holds(r, c) { return this.playable(r, c) && !this.block[r][c]; }
+  // Yerinden oynamayan hücre: yerçekimi bunun üzerinden atlar
+  fixed(r, c) { return !this.holds(r, c) || !!this.grid[r][c]?.chain; }
+  countBlocks(type) {
+    let n = 0;
+    for (const row of this.block) for (const b of row) if (b && (!type || b.type === type)) n++;
+    return n;
+  }
+  countCrowns() {
+    let n = 0;
+    for (const row of this.grid) for (const t of row) if (t && t.special === SP.CROWN) n++;
+    return n;
   }
 
   key(r, c) { return r * this.cols + c; }
@@ -47,7 +70,7 @@ export class Board {
   colorAt(r, c) {
     if (!this.inBounds(r, c)) return -1;
     const t = this.grid[r][c];
-    if (!t || t.special === SP.RAINBOW) return -1;
+    if (!t || t.special === SP.RAINBOW || t.special === SP.CROWN) return -1;
     return t.color;
   }
 
@@ -55,7 +78,7 @@ export class Board {
     for (let attempt = 0; attempt < 200; attempt++) {
       for (let r = 0; r < this.rows; r++) {
         for (let c = 0; c < this.cols; c++) {
-          if (this.isHole(r, c)) { this.grid[r][c] = null; continue; }
+          if (!this.holds(r, c)) { this.grid[r][c] = null; continue; }
           let color;
           let guard = 0;
           do {
@@ -68,8 +91,11 @@ export class Board {
           this.grid[r][c] = this.newTile(color);
         }
       }
+      for (const [r, c] of this.chainCells) if (this.grid[r][c]) this.grid[r][c].chain = true;
       if (this.findGroups().length === 0 && this.hasPossibleMove()) return;
     }
+    // Çok sıkışık tahta: zincirsiz devam et
+    for (const [r, c] of this.chainCells) if (this.grid[r][c]) this.grid[r][c].chain = false;
   }
 
   // Yatay/dikey 3+ dizileri bulur ve ortak hücresi olanları (L/T şekilleri) birleştirir.
@@ -163,7 +189,7 @@ export class Board {
   }
 
   // Temizlenecek kümedeki özel taşları zincirleme etkinleştirir.
-  expandSpecials(toClear, activations, skip = new Set()) {
+  expandSpecials(toClear, activations, skip = new Set(), hits = new Set()) {
     const queue = [...toClear];
     const done = new Set(skip);
     while (queue.length) {
@@ -172,7 +198,7 @@ export class Board {
       done.add(k);
       const [r, c] = this.rc(k);
       const t = this.grid[r][c];
-      if (!t || t.special === SP.NONE) continue;
+      if (!t || t.special === SP.NONE || t.special === SP.CROWN) continue;
       const add = [];
       if (t.special === SP.ROW) {
         for (let i = 0; i < this.cols; i++) add.push([r, i]);
@@ -189,7 +215,8 @@ export class Board {
       }
       if (t.special !== SP.RAINBOW) activations.push({ r, c, special: t.special, color: t.color });
       for (const [ar, ac] of add) {
-        if (!this.playable(ar, ac) || !this.grid[ar][ac]) continue;
+        if (this.isBlock(ar, ac)) { hits.add(this.key(ar, ac)); continue; }
+        if (!this.playable(ar, ac) || !this.grid[ar][ac] || this.grid[ar][ac].special === SP.CROWN) continue;
         const nk = this.key(ar, ac);
         if (!toClear.has(nk)) { toClear.add(nk); queue.push(nk); }
       }
@@ -210,14 +237,34 @@ export class Board {
       if (sp) creates.push(sp);
     }
     const activations = forced ? [...forced.activations] : [];
-    this.expandSpecials(toClear, activations, forced ? forced.skip : undefined);
+    const hits = new Set();
+    // Asa vb. ile doğrudan engele vurma
+    for (const k of toClear) { const [r, c] = this.rc(k); if (this.isBlock(r, c)) hits.add(k); }
+    this.expandSpecials(toClear, activations, forced ? forced.skip : undefined, hits);
+    // Eşleşmenin yanındaki engeller hasar alır
+    for (const g of groups) {
+      for (const k of g.cells) {
+        const [r, c] = this.rc(k);
+        for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) if (this.isBlock(r + dr, c + dc)) hits.add(this.key(r + dr, c + dc));
+      }
+    }
 
     const cleared = [];
     const iceBroken = [];
+    const unchained = [];
+    const blockHits = [];
+    for (const k of hits) {
+      const [r, c] = this.rc(k);
+      const b = this.block[r][c];
+      b.hp--;
+      blockHits.push({ r, c, type: b.type, hp: b.hp });
+      if (b.hp <= 0) this.block[r][c] = null;
+    }
     for (const k of toClear) {
       const [r, c] = this.rc(k);
       const t = this.grid[r][c];
       if (!t) continue;
+      if (t.chain) { t.chain = false; unchained.push({ r, c, tile: t }); continue; }
       cleared.push({ r, c, tile: t });
       this.grid[r][c] = null;
       if (this.ice[r][c] > 0) {
@@ -231,11 +278,13 @@ export class Board {
       if (usedPivots.has(cr.key)) continue;
       usedPivots.add(cr.key);
       const [r, c] = this.rc(cr.key);
+      if (this.grid[r][c]) continue; // zincirli taş yerinde kaldı
       const tile = this.newTile(cr.color, cr.special);
       this.grid[r][c] = tile;
       created.push({ r, c, tile });
     }
-    return { cleared, created, activations, iceBroken, groups: groups.length };
+    if (!cleared.length && !unchained.length && !blockHits.length && !groups.length) return null;
+    return { cleared, created, activations, iceBroken, unchained, blockHits, groups: groups.length };
   }
 
   // Taşları aşağı düşürür (boşluklardan geçebilirler) ve üstten yenilerini ekler.
@@ -244,7 +293,7 @@ export class Board {
     const spawns = [];
     for (let c = 0; c < this.cols; c++) {
       const cells = [];
-      for (let r = this.rows - 1; r >= 0; r--) if (!this.isHole(r, c)) cells.push(r);
+      for (let r = this.rows - 1; r >= 0; r--) if (!this.fixed(r, c)) cells.push(r);
       const tiles = [];
       for (const r of cells) {
         const t = this.grid[r][c];
@@ -256,7 +305,11 @@ export class Board {
           this.grid[r][c] = t;
           if (from !== r) moves.push({ id: t.id, r, c, fromR: from });
         } else {
-          const t = this.newTile(this.randColor());
+          let t;
+          if (this.crownsPending > 0 && this.countCrowns() < this.maxCrownsOnBoard && this.rng() < 0.35) {
+            this.crownsPending--;
+            t = this.newTile(-2, SP.CROWN);
+          } else t = this.newTile(this.randColor());
           this.grid[r][c] = t;
           spawns.push({ tile: t, r, c, order: i - tiles.length });
         }
@@ -264,6 +317,9 @@ export class Board {
     }
     return { moves, spawns };
   }
+
+  // Patlayan özel taş mı (taç değil)
+  static blast(t) { return t.special !== SP.NONE && t.special !== SP.CROWN; }
 
   isAdjacent(a, b) {
     return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
@@ -280,14 +336,15 @@ export class Board {
     if (!this.playable(a.r, a.c) || !this.playable(b.r, b.c) || !this.isAdjacent(a, b)) return { valid: false };
     const ta = this.grid[a.r][a.c];
     const tb = this.grid[b.r][b.c];
-    if (!ta || !tb) return { valid: false };
+    if (!ta || !tb || ta.chain || tb.chain) return { valid: false };
 
     this.swapCells(a, b);
     // Takastan sonra: ta artık b'de, tb artık a'da
     const ka = this.key(a.r, a.c);
     const kb = this.key(b.r, b.c);
 
-    if (ta.special === SP.RAINBOW || tb.special === SP.RAINBOW) {
+    const crownSwap = ta.special === SP.CROWN || tb.special === SP.CROWN;
+    if (!crownSwap && (ta.special === SP.RAINBOW || tb.special === SP.RAINBOW)) {
       const cells = new Set([ka, kb]);
       const activations = [];
       const skip = new Set();
@@ -308,7 +365,7 @@ export class Board {
       return { valid: true, forced: { cells, activations, skip } };
     }
 
-    if (ta.special !== SP.NONE && tb.special !== SP.NONE) {
+    if (Board.blast(ta) && Board.blast(tb)) {
       // İki özel taş birleşimi: ikisi birden patlar
       return { valid: true, forced: { cells: new Set([ka, kb]), activations: [], skip: new Set() } };
     }
@@ -344,10 +401,11 @@ export class Board {
           if (!this.playable(a.r, a.c) || !this.playable(b.r, b.c)) continue;
           const ta = this.grid[a.r][a.c];
           const tb = this.grid[b.r][b.c];
-          if (!ta || !tb) continue;
+          if (!ta || !tb || ta.chain || tb.chain) continue;
+          const crownSwap = ta.special === SP.CROWN || tb.special === SP.CROWN;
           let ok = false;
-          if (ta.special === SP.RAINBOW || tb.special === SP.RAINBOW) ok = true;
-          else if (ta.special !== SP.NONE && tb.special !== SP.NONE) ok = true;
+          if (!crownSwap && (ta.special === SP.RAINBOW || tb.special === SP.RAINBOW)) ok = true;
+          else if (Board.blast(ta) && Board.blast(tb)) ok = true;
           else {
             this.swapCells(a, b);
             ok = this.hasRunAt(a.r, a.c) || this.hasRunAt(b.r, b.c);
@@ -365,13 +423,48 @@ export class Board {
 
   hasPossibleMove() { return this.listMoves(1).length > 0; }
 
+  // Sütunun en alt taş tutan hücresine ulaşan taçlar toplanır.
+  collectCrowns() {
+    const got = [];
+    for (let c = 0; c < this.cols; c++) {
+      for (let r = this.rows - 1; r >= 0; r--) {
+        if (!this.holds(r, c)) continue;
+        const t = this.grid[r][c];
+        if (t && t.special === SP.CROWN) { got.push({ r, c, tile: t }); this.grid[r][c] = null; }
+        break;
+      }
+    }
+    return got;
+  }
+
+  // Fırtına bulutu yanındaki sıradan bir mücevheri yutar.
+  spreadCloud() {
+    const options = [];
+    for (let r = 0; r < this.rows; r++) {
+      for (let c = 0; c < this.cols; c++) {
+        if (this.block[r][c]?.type !== 'cloud') continue;
+        for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nr = r + dr; const nc = c + dc;
+          const t = this.holds(nr, nc) ? this.grid[nr][nc] : null;
+          if (t && t.special === SP.NONE && !t.chain) options.push([nr, nc]);
+        }
+      }
+    }
+    if (!options.length) return null;
+    const [r, c] = options[Math.floor(this.rng() * options.length)];
+    const tile = this.grid[r][c];
+    this.grid[r][c] = null;
+    this.block[r][c] = { type: 'cloud', hp: 1 };
+    return { r, c, tile };
+  }
+
   // Hamle kalmadığında taşları karıştırır. Taş kimlikleri korunur.
   shuffle() {
     const cells = [];
     const tiles = [];
     for (let r = 0; r < this.rows; r++) {
       for (let c = 0; c < this.cols; c++) {
-        if (this.grid[r][c]) { cells.push([r, c]); tiles.push(this.grid[r][c]); }
+        if (this.grid[r][c] && !this.grid[r][c].chain) { cells.push([r, c]); tiles.push(this.grid[r][c]); }
       }
     }
     for (let attempt = 0; attempt < 100; attempt++) {

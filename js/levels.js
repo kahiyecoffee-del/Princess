@@ -24,7 +24,11 @@ export function getLevel(n) {
   let kind;
   if (n <= 2) kind = 'score';
   else if (n <= 5) kind = n % 2 ? 'collect' : 'score';
-  else kind = ['ice', 'score', 'collect'][n % 3];
+  else if (n < 8) kind = ['ice', 'score', 'collect'][n % 3];
+  else {
+    kind = ['ice', 'score', 'collect', 'crown', 'cloud'][n % 5];
+    if (kind === 'cloud' && n < 14) kind = 'score';
+  }
 
   // Her 10 seviyenin son ikisi "zor seviye" olarak işaretlenir.
   const hard = n >= 10 && (n % 10 === 9 || n % 10 === 0);
@@ -47,6 +51,9 @@ export function getLevel(n) {
   const COLLECT_PER_MOVE = { 4: 3.6, 5: 1.45, 6: 0.85 };
   const perMove = SCORE_PER_MOVE[colors];
 
+  const clouds = [];
+  const stones = [];
+  const chains = [];
   const level = {
     number: n,
     rows: 8,
@@ -57,6 +64,10 @@ export function getLevel(n) {
     hard,
     holes,
     ice: [],
+    clouds,
+    stones,
+    chains,
+    crowns: 0,
     collect: [],
     targetScore: 0,
     starScores: [0, 0, 0],
@@ -73,6 +84,18 @@ export function getLevel(n) {
       level.collect.push({ color, count: Math.max(6, Math.round(perColor)) });
     }
     level.targetScore = 0;
+  } else if (kind === 'crown') {
+    // Taç indirme: tacı en alta getir
+    level.moves = Math.round(clamp(34 - n * 0.02, 30, 34)) - (hard ? 2 : 0);
+    level.crowns = n < 90 ? 2 : 3;
+  } else if (kind === 'cloud') {
+    // Fırtına bulutları: üst ortada bir küme, her hamle kırılmazsa büyür
+    level.moves = Math.round(clamp(24 - n * 0.03, 19, 24)) - (hard ? 2 : 0);
+    const count = clamp(Math.round(2 + 7 * difficulty), 6, 13) - Math.floor(holes.length / 3);
+    const cells = [];
+    for (let r = 0; r < 4; r++) for (let c = 1; c < 7; c++) if (!holeSet.has(r * 8 + c)) cells.push([r, c]);
+    cells.sort((a, b) => (Math.abs(a[1] - 3.5) + a[0] * 0.6 + rng()) - (Math.abs(b[1] - 3.5) + b[0] * 0.6 + rng()));
+    clouds.push(...cells.slice(0, count));
   } else {
     // Buz: kenarlardan içe doğru büyüyen bir alan
     // Buz seviyeleri belirli hücreleri hedeflemeyi gerektirir; daha cömert hamle verilir.
@@ -87,6 +110,28 @@ export function getLevel(n) {
     level.ice = chosen.map(([r, c], i) => [r, c, i < layers2 ? 2 : 1]);
   }
 
+  // Ay taşları ve zincirler sonraki bölümlerde ek engel olarak gelir
+  const taken = new Set([...holeSet, ...clouds.map(([r, c]) => r * 8 + c)]);
+  const free = () => {
+    const out = [];
+    for (let r = 2; r < 8; r++) for (let c = 0; c < 8; c++) if (!taken.has(r * 8 + c)) out.push([r, c]);
+    return out;
+  };
+  if (n >= 21 && kind !== 'cloud' && rng() < 0.45) {
+    const cells = free();
+    const k = clamp(2 + Math.floor(n / 50), 2, 6);
+    for (let i = 0; i < k && cells.length; i++) {
+      const [r, c] = cells.splice(Math.floor(rng() * cells.length), 1)[0];
+      stones.push([r, c]); taken.add(r * 8 + c);
+      if (k > 2 && i % 2 === 0 && !taken.has(r * 8 + (7 - c))) { stones.push([r, 7 - c]); taken.add(r * 8 + (7 - c)); i++; }
+    }
+  }
+  if (n >= 26 && rng() < 0.5) {
+    const cells = free();
+    const k = clamp(3 + Math.floor(n / 30), 3, 10);
+    for (let i = 0; i < k && cells.length; i++) chains.push(cells.splice(Math.floor(rng() * cells.length), 1)[0]);
+  }
+
   const base = level.targetScore || Math.round((moves * perMove * 0.6) / 50) * 50;
   level.starScores = [base, Math.round(base * 1.5 / 50) * 50, Math.round(base * 2.1 / 50) * 50];
   if (level.targetScore) level.starScores[0] = level.targetScore;
@@ -96,5 +141,7 @@ export function getLevel(n) {
 export function describeGoal(level) {
   if (level.kind === 'score') return `Reach ${level.targetScore.toLocaleString('en-US')} points`;
   if (level.kind === 'collect') return 'Collect the jewels shown below';
+  if (level.kind === 'cloud') return 'Clear all the storm clouds';
+  if (level.kind === 'crown') return 'Bring the crowns down';
   return 'Break all the crystal ice';
 }
