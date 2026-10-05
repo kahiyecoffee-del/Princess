@@ -26,6 +26,8 @@ export class Engine {
     this.crownsGot = 0;
     this.crownsNeeded = level.crowns || 0;
     if (this.crownsNeeded) this.dropInitialCrowns();
+    // Taç yerleştirme olası hamleyi yok ettiyse karıştır
+    for (let i = 0; i < 5 && !this.board.hasPossibleMove(); i++) this.board.shuffle();
     this.startClouds = this.board.countBlocks('cloud');
     this.score = 0;
     this.movesLeft = level.moves;

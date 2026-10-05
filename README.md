@@ -10,7 +10,7 @@ Gerçek para, bahis veya şans çarkı içermeyen, sakinleştirici ve reklam gel
 |---|---|
 | Oyun | 8×8 tahta, 4–6 renk, kayma/dokunma ile takas, zincirleme düşüşler (cascade) |
 | Özel taşlar | 4'lü → satır/sütun ışını, L/T → yıldız bombası (3×3), 5'li → gökkuşağı küresi (bir rengin tamamı) |
-| Seviyeler | 200 seviye: puan, taş toplama ve kristal buz kırma hedefleri. Her 10 seviyenin son ikisi "zor seviye" |
+| Seviyeler | 1000 seviye (100 bölüm, 20 farklı diyar, sonra daha yüksek diyarlarda II, III… olarak devam). Hedefler: puan, taş toplama, kristal buz, taç indirme, fırtına bulutu. Engeller: ay taşı, altın zincir. Her bölüm kolay başlar, son iki seviyesi "zor seviye" |
 | Zorluk | Seviye arttıkça daha az hamle, daha çok renk, daha yüksek hedef, tahtada boşluklar, çift katlı buz |
 | Ekonomi | Altın para: seviye ödülleri (ilk geçiş + yıldıza göre), 7 günlük giriş hediyesi, reklam izle +40 (günde 5). Kraliyet Marketi: Comet Lance, Star Bomb, Celestial Orb (seviye başı güçlendiriciler), Royal Wand (oyun içi), can doldurma, +5 hamle |
 | Elde tutma | Kazanma serisi (seviye başı bonus), hafta sonu **Yıldız Festivali** (2× altın, yıldız parçası ödülleri), her 10 seviyede seslendirilmiş bölüm hikâyesi, prensesin ağzından yerel bildirimler |

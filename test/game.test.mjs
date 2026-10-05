@@ -185,7 +185,8 @@ test('kazanma serisi, festival ve bölüm hikâyeleri', async () => {
   assert.equal(st.festival.shards, 0, 'yeni hafta sıfırlanır');
   assert.equal(chapterStory(9), null);
   assert.equal(chapterStory(10).voice, 'story1');
-  assert.equal(chapterStory(110).voice, 'story1');
+  assert.equal(chapterStory(110).voice, 'story11');
+  assert.equal(chapterStory(210).voice, 'story1'); // 20 hikâyeden sonra döngü
 });
 
 test('bildirim planı: canlar, günlük hediye, festival, özlem', async () => {
