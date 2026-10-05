@@ -477,7 +477,8 @@ export class Board {
         return cells.map(([r, c]) => ({ id: this.grid[r][c].id, r, c }));
       }
     }
-    // Çok nadir: renkleri baştan üret
+    // Çok nadir: renkleri baştan üret (tahtadaki taçlar sonra yeniden düşer)
+    this.crownsPending += this.countCrowns();
     this.fillInitial();
     return null;
   }

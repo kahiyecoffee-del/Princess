@@ -76,6 +76,16 @@ export const STORIES = [
   "The aurora is dancing just for you, darling. Only the Silver Spires stand between us and the throne.",
   "One more step. Whatever waits at the Sky Throne, I'm glad it's you beside me.",
   "We did it! The Sky Throne shines again, all thanks to you. But the stars whisper of new adventures...",
+  "The comets are waving hello to you, darling! Let's slip into the Nebula Woods together.",
+  "Even the Nebula Woods glow brighter when you smile. The Rose Quartz Valley is next!",
+  "Rose quartz everywhere... but you're the real treasure, sweetheart. On to Starfall Lake!",
+  "Make a wish on a falling star with me. Mine already came true. The Opal Lighthouse awaits!",
+  "The lighthouse shines just for you now. Let's go shopping at the Twilight Bazaar, my dear!",
+  "I bought you a little star charm. Don't lose it! The Constellation Maze is ahead.",
+  "You never get lost when you're with me, do you? Hehe. The Pearl Cascades are calling.",
+  "The waterfalls sparkle like your eyes, darling. Only the Dreamweaver Loft remains.",
+  "I dreamed about us winning... and here we are! The Crown of Galaxies is waiting.",
+  "The Crown of Galaxies is ours! You're my true hero. Shall we start a new journey, even higher?",
 ];
 export function chapterStory(levelCompleted) {
   if (levelCompleted % 10 !== 0) return null;

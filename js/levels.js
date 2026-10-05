@@ -3,7 +3,7 @@
 // hedefler, daha çok buz ve tahtada boşluklar.
 import { mulberry32 } from './board.js';
 
-export const LEVEL_COUNT = 200;
+export const LEVEL_COUNT = 1000;
 
 // Tahtadaki boşluk desenleri (simetrik). Zor seviyelerde kullanılır.
 const HOLE_PATTERNS = [
@@ -46,6 +46,8 @@ export function getLevel(n) {
   // Zorluk çarpanı: ilk seviyelerde ~0.6, 50. seviyede ~1.2, sonra yavaşça ~1.5'e çıkar.
   let difficulty = 0.6 + 0.9 * (1 - Math.exp(-n / 45));
   if (hard) difficulty *= 1.1;
+  // Testere dişi ritim: her bölüm rahat başlar, sonlara doğru zorlaşır (oyuncu nefes alır)
+  if (n > 20) difficulty *= [0.82, 0.86, 0.9, 0.94, 0.97, 1, 1.02, 1.04, 1, 1][(n - 1) % 10];
   // Rastgele oynayan bir oyuncunun hamle başına ortalama kazancı (simülasyonla ölçüldü).
   const SCORE_PER_MOVE = { 4: 800, 5: 290, 6: 150 };
   const COLLECT_PER_MOVE = { 4: 3.6, 5: 1.45, 6: 0.85 };
@@ -87,7 +89,7 @@ export function getLevel(n) {
   } else if (kind === 'crown') {
     // Taç indirme: tacı en alta getir
     level.moves = Math.round(clamp(34 - n * 0.02, 30, 34)) - (hard ? 2 : 0);
-    level.crowns = n < 90 ? 2 : 3;
+    level.crowns = n < 90 || (n - 1) % 10 < 5 ? 2 : 3;
   } else if (kind === 'cloud') {
     // Fırtına bulutları: üst ortada bir küme, her hamle kırılmazsa büyür
     level.moves = Math.round(clamp(24 - n * 0.03, 19, 24)) - (hard ? 2 : 0);

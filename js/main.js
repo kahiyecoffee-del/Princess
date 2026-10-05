@@ -530,14 +530,20 @@ async function enterInviteCode() {
 
 // ---------- Kingdom map ----------
 // A winding golden road climbs from level 1 (bottom) to the castle (top).
-const chapterName = (ch) => t(`ch${(ch % 10) + 1}`);
+// 20 named lands; after that the journey repeats in higher realms (II, III, ...)
+const ROMAN = ['', '', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const chapterName = (ch) => {
+  const realm = Math.floor(ch / 20) + 1;
+  return `${t(`ch${(ch % 20) + 1}`)}${realm > 1 ? ` ${ROMAN[realm] || realm}` : ''}`;
+};
 const NODE_GAP = 92;
 function renderMap() {
   const path = $('#level-grid');
   const scroller = $('#map-scroll');
   path.innerHTML = '';
   const w = Math.min(scroller.clientWidth || 360, 520);
-  const total = LEVEL_COUNT;
+  // Only draw the road travelled so far plus the next two chapters (keeps a 1000-level map light)
+  const total = Math.min(LEVEL_COUNT, Math.ceil((state.maxLevel + 15) / 10) * 10);
   const height = total * NODE_GAP + 420;
   path.style.height = `${height}px`;
   const pos = (n) => ({
@@ -545,11 +551,11 @@ function renderMap() {
     y: height - 230 - (n - 1) * NODE_GAP,
   });
   // Golden road; the part already travelled glows
-  const road = (upTo) => {
+  const road = (from, upTo) => {
     let d = '';
-    for (let n = 1; n <= upTo; n++) {
+    for (let n = from; n <= upTo; n++) {
       const p = pos(n);
-      if (n === 1) d += `M${p.x} ${p.y}`;
+      if (n === from) d += `M${p.x} ${p.y}`;
       else {
         const q = pos(n - 1);
         d += ` C${q.x} ${q.y - NODE_GAP / 2} ${p.x} ${p.y + NODE_GAP / 2} ${p.x} ${p.y}`;
@@ -557,11 +563,17 @@ function renderMap() {
     }
     return d;
   };
-  const full = road(total);
-  const done = road(Math.min(state.maxLevel, total));
-  path.insertAdjacentHTML('beforeend', `<svg class="road" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}">
-    <path d="${full}" class="road-base"/>${state.maxLevel > 1 ? `<path d="${done}" class="road-glow"/>` : ''}
-    <path d="${full}" class="road-dash"/></svg>`);
+  // The road is drawn in chapter-sized pieces: very tall SVGs fail to render on some phones
+  for (let from = 1; from < total; from += 10) {
+    const to = Math.min(total, from + 10);
+    const top = pos(to).y - 40;
+    const h = pos(from).y - top + 40;
+    const seg = road(from, to);
+    const done = state.maxLevel > from ? road(from, Math.min(state.maxLevel, to)) : '';
+    path.insertAdjacentHTML('beforeend', `<svg class="road" style="top:${top}px" width="${w}" height="${h}" viewBox="0 ${top} ${w} ${h}">
+      <path d="${seg}" class="road-base"/>${done ? `<path d="${done}" class="road-glow"/>` : ''}
+      <path d="${seg}" class="road-dash"/></svg>`);
+  }
   for (let n = 1; n <= total; n++) {
     const p = pos(n);
     if ((n - 1) % 10 === 0) {
